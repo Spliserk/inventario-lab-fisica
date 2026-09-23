@@ -1,0 +1,2573 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sistema de inventario para el Laboratorio de Física - UNISANGIL / ABC Laboratorios S.A.S.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔬</text></svg>">
+<title>Inventario Lab Física</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #F0F2F6;
+  --surface: #FFFFFF;
+  --surface-alt: #F5F7FA;
+  --surface-raised: #FFFFFF;
+  --text: #1B2030;
+  --text-sec: #556070;
+  --text-dim: #8D96A4;
+  --border: #D8DDE6;
+  --border-light: #E8ECF1;
+  --accent: #1A6B8A;
+  --accent-hover: #145A75;
+  --accent-soft: #E6F1F6;
+  --green: #2D8F65;
+  --green-bg: #E8F5EF;
+  --green-bdr: #A8DCC3;
+  --amber: #A87A25;
+  --amber-bg: #FBF3E0;
+  --amber-bdr: #E8D49A;
+  --red: #B83B3B;
+  --red-bg: #FCEAEA;
+  --red-bdr: #E8AAAA;
+  --purple: #6B4FA0;
+  --purple-bg: #F0ECF8;
+  --shadow-s: 0 1px 3px rgba(20,30,60,0.06);
+  --shadow-m: 0 4px 12px rgba(20,30,60,0.08);
+  --radius: 6px;
+  --radius-lg: 10px;
+  --sans: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', 'Consolas', monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111419;
+    --surface: #1A1E26;
+    --surface-alt: #1F242E;
+    --surface-raised: #232830;
+    --text: #DEE2EA;
+    --text-sec: #99A0AE;
+    --text-dim: #626A78;
+    --border: #2A303A;
+    --border-light: #242930;
+    --accent: #5AB4D4;
+    --accent-hover: #7CC8E2;
+    --accent-soft: #162A35;
+    --green: #5CC996;
+    --green-bg: #142A20;
+    --green-bdr: #1E4030;
+    --amber: #E0B050;
+    --amber-bg: #2A2414;
+    --amber-bdr: #3A3018;
+    --red: #E07070;
+    --red-bg: #2A1818;
+    --red-bdr: #3A2020;
+    --purple: #A88ED8;
+    --purple-bg: #1E1830;
+    --shadow-s: 0 1px 3px rgba(0,0,0,0.25);
+    --shadow-m: 0 4px 12px rgba(0,0,0,0.35);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111419;
+  --surface: #1A1E26;
+  --surface-alt: #1F242E;
+  --surface-raised: #232830;
+  --text: #DEE2EA;
+  --text-sec: #99A0AE;
+  --text-dim: #626A78;
+  --border: #2A303A;
+  --border-light: #242930;
+  --accent: #5AB4D4;
+  --accent-hover: #7CC8E2;
+  --accent-soft: #162A35;
+  --green: #5CC996;
+  --green-bg: #142A20;
+  --green-bdr: #1E4030;
+  --amber: #E0B050;
+  --amber-bg: #2A2414;
+  --amber-bdr: #3A3018;
+  --red: #E07070;
+  --red-bg: #2A1818;
+  --red-bdr: #3A2020;
+  --purple: #A88ED8;
+  --purple-bg: #1E1830;
+  --shadow-s: 0 1px 3px rgba(0,0,0,0.25);
+  --shadow-m: 0 4px 12px rgba(0,0,0,0.35);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--body);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+button, input, select, textarea { font-family: inherit; }
+
+/* ── APP SHELL ── */
+.app { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-brand {
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-brand h1 {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.sidebar-brand p {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+
+/* Section tabs */
+.section-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+.section-tab {
+  flex: 1;
+  padding: 10px 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 150ms ease;
+}
+.section-tab:hover { color: var(--text-sec); background: var(--surface-alt); }
+.section-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.sidebar-search {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-light);
+}
+.sidebar-search input {
+  width: 100%;
+  padding: 7px 10px 7px 30px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 150ms ease;
+}
+.sidebar-search input:focus { border-color: var(--accent); }
+.sidebar-search input::placeholder { color: var(--text-dim); }
+.search-wrap { position: relative; }
+.search-icon {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+.nav-group { padding: 0 6px; margin-bottom: 1px; }
+.nav-group-label {
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  padding: 6px 8px 2px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-sec);
+  transition: all 120ms ease;
+  user-select: none;
+}
+.nav-item:hover { background: var(--surface-alt); color: var(--text); }
+.nav-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.nav-badge {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: var(--surface-alt);
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.nav-code {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  font-weight: 400;
+}
+.nav-item.active .nav-badge { background: var(--accent); color: #fff; }
+.nav-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.nav-sub { padding-left: 20px; }
+.nav-sub .nav-item { font-size: 12px; padding: 4px 8px; }
+
+.sidebar-footer {
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-dim);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.sidebar-footer button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.sidebar-footer button:hover { text-decoration: underline; }
+
+/* ── MAIN ── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-wrap: wrap;
+  min-height: 50px;
+}
+.topbar-title {
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-right: auto;
+}
+.topbar-crumb {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-left: 8px;
+  font-weight: 400;
+}
+.stat-pills { display: flex; gap: 8px; margin-right: 6px; }
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.pill-ok { background: var(--green-bg); color: var(--green); }
+.pill-warn { background: var(--amber-bg); color: var(--amber); }
+.pill-bad { background: var(--red-bg); color: var(--red); }
+.pill-note { background: var(--purple-bg); color: var(--purple); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 120ms ease;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--surface-alt); border-color: var(--text-dim); }
+.btn-accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-accent:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-danger { color: var(--red); }
+.btn-danger:hover { background: var(--red-bg); border-color: var(--red); }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-mobile-menu { display: none; background: none; border: none; color: var(--text); font-size: 20px; cursor: pointer; padding: 4px; }
+
+/* ── CONTENT ── */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+/* ── DASHBOARD ── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.dash-card {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-s);
+}
+.dash-card-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.dash-card-value {
+  font-family: var(--sans);
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.dash-card-value.ok { color: var(--green); }
+.dash-card-value.warn { color: var(--amber); }
+.dash-card-value.bad { color: var(--red); }
+.dash-card-sub {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.dash-section-title {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--text-sec);
+}
+
+.dash-locations {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.dash-loc {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 120ms ease;
+  box-shadow: var(--shadow-s);
+}
+.dash-loc:hover { border-color: var(--accent); background: var(--accent-soft); }
+.dash-loc-icon { font-size: 22px; flex-shrink: 0; }
+.dash-loc-info { min-width: 0; flex: 1; }
+.dash-loc-name {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-loc-count { font-size: 11px; color: var(--text-dim); }
+.dash-loc-bar {
+  height: 4px;
+  background: var(--border-light);
+  border-radius: 2px;
+  margin-top: 5px;
+  overflow: hidden;
+  display: flex;
+}
+.dash-loc-bar span { height: 100%; }
+.bar-ok { background: var(--green); }
+.bar-warn { background: var(--amber); }
+.bar-bad { background: var(--red); }
+
+/* ── TABLE ── */
+.filter-bar { display: flex; gap: 6px; padding-bottom: 12px; flex-wrap: wrap; }
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-sec);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.filter-chip:hover { border-color: var(--accent); color: var(--accent); }
+.filter-chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+.tbl-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-s);
+}
+.tbl-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead { position: sticky; top: 0; z-index: 2; }
+th {
+  background: var(--surface-alt);
+  padding: 9px 12px;
+  text-align: left;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-sec);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: top;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--surface-alt); }
+
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.st-presente { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-bdr); }
+.st-desgastado { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-bdr); }
+.st-posible-faltante, .st-faltante, .st-dañado { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-bdr); }
+.st-nota { background: var(--purple-bg); color: var(--purple); border: 1px solid transparent; }
+.st-fuera { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-bdr); }
+
+.editable {
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 1px 3px;
+  margin: -1px -3px;
+}
+.editable:hover { background: var(--accent-soft); }
+.qty { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+.row-actions { display: flex; gap: 2px; opacity: 0; transition: opacity 120ms; }
+tr:hover .row-actions { opacity: 1; }
+.row-act {
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.row-act:hover { background: var(--surface-alt); color: var(--text); }
+.row-act.del:hover { background: var(--red-bg); color: var(--red); }
+
+/* ── EMPTY STATE ── */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--text-dim);
+  text-align: center;
+}
+.empty h3 {
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-sec);
+  margin: 12px 0 4px;
+}
+.empty p { font-size: 13px; max-width: 280px; }
+
+/* ── MODAL ── */
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 14px;
+}
+.modal-bg[hidden] { display: none !important; }
+.modal-box {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-m);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-head h2 { font-family: var(--sans); font-size: 15px; font-weight: 700; }
+.modal-x {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: none;
+  color: var(--text-dim); cursor: pointer;
+  border-radius: var(--radius); font-size: 18px;
+}
+.modal-x:hover { background: var(--surface-alt); color: var(--text); }
+.modal-body { padding: 18px; }
+.fg { margin-bottom: 12px; }
+.fg label {
+  display: block;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-sec);
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.fg input, .fg select, .fg textarea {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 120ms;
+}
+.fg input:focus, .fg select:focus, .fg textarea:focus { border-color: var(--accent); }
+.fg textarea { resize: vertical; min-height: 50px; }
+.fg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 18px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--text);
+  color: var(--bg);
+  padding: 9px 16px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: var(--shadow-m);
+  z-index: 200;
+  transform: translateY(60px);
+  opacity: 0;
+  transition: all 250ms ease;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .sidebar { position: fixed; left: -280px; top: 0; bottom: 0; z-index: 90; transition: left 200ms ease; width: 280px; }
+  .sidebar.open { left: 0; }
+  .mobile-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 89; }
+  .mobile-overlay[hidden] { display: none !important; }
+  .btn-mobile-menu { display: block; }
+  .topbar { padding: 8px 12px; }
+  .content { padding: 12px; }
+  .stat-pills { display: none; }
+  .fg-row { grid-template-columns: 1fr; }
+  .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── LOGIN OVERLAY ── */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.login-overlay[hidden] { display: none !important; }
+.login-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-m);
+  padding: 36px 32px;
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+}
+.login-box h2 {
+  font-family: var(--sans);
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.login-box .login-sub {
+  font-size: 13px;
+  color: var(--text-sec);
+  margin-bottom: 20px;
+}
+.login-box .login-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+.login-box input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 15px;
+  text-align: center;
+  outline: none;
+  margin-bottom: 14px;
+  letter-spacing: 2px;
+  transition: border-color 150ms;
+}
+.login-box input:focus { border-color: var(--accent); }
+.login-box .login-btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms;
+}
+.login-box .login-btn:hover { background: var(--accent-hover); }
+.login-box .login-error {
+  color: var(--red);
+  font-size: 12px;
+  margin-top: 8px;
+  min-height: 18px;
+}
+.login-box .login-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 16px;
+}
+.logout-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.logout-btn:hover { color: var(--red); background: var(--red-bg); }
+
+/* ── STATUS DROPDOWN ── */
+.status-dropdown {
+  position: absolute;
+  z-index: 50;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-m);
+  padding: 4px 0;
+  min-width: 160px;
+  animation: sdFadeIn 120ms ease;
+}
+@keyframes sdFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.status-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 80ms ease;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  color: var(--text);
+  font-family: var(--body);
+}
+.status-dropdown-item:hover { background: var(--surface-alt); }
+.status-dropdown-item.selected { background: var(--accent-soft); font-weight: 600; }
+.status-dropdown-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dropdown-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+}
+
+/* ── LOCATION MANAGEMENT ── */
+.loc-mgmt-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  margin: 4px 8px 6px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px dashed var(--accent);
+  transition: all 120ms ease;
+  font-family: var(--sans);
+}
+.loc-mgmt-btn:hover { background: var(--accent); color: #fff; border-style: solid; }
+.loc-actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+.nav-item:hover .loc-actions,
+.dash-loc:hover .loc-actions { opacity: 1; }
+.loc-act-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  color: var(--text-dim);
+  transition: all 100ms;
+  line-height: 1;
+}
+.loc-act-btn:hover { background: var(--surface-alt); color: var(--text); }
+.loc-act-btn.del:hover { background: var(--red-bg); color: var(--red); }
+.drawer-list-editor { display: flex; flex-direction: column; gap: 4px; }
+.drawer-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.drawer-row input {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 13px;
+}
+.drawer-row button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--red);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.drawer-row button:hover { background: var(--red-bg); }
+.add-drawer-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  margin-top: 4px;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--body);
+}
+.add-drawer-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+.icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.icon-opt {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 100ms;
+  background: var(--surface);
+}
+.icon-opt:hover { border-color: var(--accent); background: var(--accent-soft); }
+.icon-opt.selected { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent); }
+</style>
+</head>
+<body>
+
+
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-icon">🔬</div>
+    <h2>Inventario Lab Física</h2>
+    <p class="login-sub">UNISANGIL — ABC Laboratorios S.A.S.</p>
+    <input type="password" id="loginPass" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+    <div class="login-error" id="loginError"></div>
+    <p class="login-hint">Acceso restringido al editor autorizado</p>
+  </div>
+</div>
+
+<div class="app" id="appMain" hidden>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <h1>Inventario Lab Física</h1>
+      <p>UNISANGIL — ABC Laboratorios S.A.S.</p>
+    </div>
+
+    <div class="section-tabs">
+      <button class="section-tab active" id="tabMateriales" onclick="switchSection('materiales')">Materiales</button>
+      <button class="section-tab" id="tabEquipos" onclick="switchSection('equipos')">Equipos</button>
+    </div>
+    <div class="sidebar-search">
+      <div class="search-wrap">
+        <span class="search-icon">&#x1F50D;</span>
+        <input type="text" id="searchInput" placeholder="Buscar...">
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+    <div class="sidebar-footer">
+      <span id="footerCount"></span>
+      <button onclick="exportCSV()">Exportar CSV</button> <button class="logout-btn" onclick="doLogout()" title="Cerrar sesión">🔒 Salir</button>
+    </div>
+  </aside>
+
+  <div class="mobile-overlay" id="mobileOverlay" hidden onclick="closeMobile()"></div>
+
+  <div class="main">
+    <div class="topbar" id="topbar">
+      <button class="btn-mobile-menu" onclick="toggleMobile()">&#9776;</button>
+      <span class="topbar-title" id="topTitle">Dashboard</span>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalBg" hidden>
+  <div class="modal-box" id="modalBox"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="syncIndicator" style="position:fixed;top:8px;right:8px;z-index:300;font-size:11px;font-family:var(--sans);padding:4px 10px;border-radius:12px;display:none;align-items:center;gap:4px;"></div>
+
+<!-- Firebase SDK (compat mode for vanilla JS) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+// ═══════════════════════════════════════
+//  DATA STRUCTURES
+// ═══════════════════════════════════════
+
+const EQUIPOS_MODULES = ["Acústica","Calorimetría","Mecánica","Ondas","Electrónica II","Mesa de Fuerzas","Óptica","Electricidad y Magnetismo"];
+
+const EQUIPOS_LOCATIONS = [
+  { id: "Kit A", name: "Kit A", icon: "📦", drawers: EQUIPOS_MODULES },
+  { id: "Kit B", name: "Kit B", icon: "📦", drawers: EQUIPOS_MODULES },
+  { id: "Kit C", name: "Kit C", icon: "📦", drawers: EQUIPOS_MODULES },
+  { id: "Kit D", name: "Kit D", icon: "📦", drawers: EQUIPOS_MODULES },
+  { id: "Kit E", name: "Kit E", icon: "📦", drawers: EQUIPOS_MODULES },
+  { id: "Kit F", name: "Kit F", icon: "📦", drawers: EQUIPOS_MODULES },
+];
+
+const MATERIALES_LOCATIONS = [
+  { id: "Escritorio", name: "Escritorio", icon: "🗄", drawers: ["Cajón 1","Cajón 2","Cajón 3","Cajón 4","Cajón 5","Cajón 6","Cajón 7","Cajón 8","Cajón 9","Cajón 10","Cajón 11","Cajón 12"] },
+  { id: "Armario Gris", name: "Armario Gris", icon: "🗃", drawers: ["Piso 1","Piso 2","Piso 3","Piso 4","Piso 5"] },
+  { id: "Materiales por fuera", name: "Materiales por fuera", icon: "📋", drawers: ["Mesa de laboratorio"] },
+];
+
+const STATUSES = ["Presente","Desgastado","Posible faltante","Dañado","Nota","Faltante","Fuera"];
+const STATUS_CLS = {
+  "Presente":"st-presente","Desgastado":"st-desgastado",
+  "Posible faltante":"st-posible-faltante","Dañado":"st-dañado",
+  "Nota":"st-nota","Faltante":"st-faltante","Fuera":"st-fuera"
+};
+
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+let section = "materiales"; // "materiales" | "equipos"
+let items = [];
+let nextId = 1;
+let currentLoc = null;
+let currentDrawer = null;
+let currentFilter = null;
+let viewMode = "dashboard"; // "dashboard" | "list"
+let locCodes = {}; // { "Kit F": "INV-12345", ... } códigos de inventario por ubicación
+let customMaterialesLocs = [];
+let customEquiposLocs = [];
+
+// ═══════════════════════════════════════
+//  FIREBASE CONFIG
+// ═══════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyBftjnuVvS6m5FviOQp9fxTlT6fYdr48Tw",
+  authDomain: "inventario-lab-fisica.firebaseapp.com",
+  projectId: "inventario-lab-fisica",
+  storageBucket: "inventario-lab-fisica.firebasestorage.app",
+  messagingSenderId: "841319727634",
+  appId: "1:841319727634:web:c2922e036803168cec0ecb"
+};
+
+let db = null;
+let firestoreReady = false;
+let firestoreUnsubscribe = null;
+let savingToFirestore = false;
+let ignoreNextSnapshot = false;
+
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  firestoreReady = true;
+  // Enable offline persistence for Firestore
+  db.enablePersistence({ synchronizeTabs: true }).catch(err => {
+    console.log("Firestore persistence:", err.code);
+  });
+} catch(e) {
+  console.warn("Firebase init failed, using localStorage only:", e);
+}
+
+function showSyncStatus(msg, color) {
+  const el = document.getElementById("syncIndicator");
+  if (!el) return;
+  el.style.display = "inline-flex";
+  el.style.background = color === "ok" ? "var(--green-bg)" : color === "err" ? "var(--red-bg)" : "var(--amber-bg)";
+  el.style.color = color === "ok" ? "var(--green)" : color === "err" ? "var(--red)" : "var(--amber)";
+  el.textContent = msg;
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.style.display = "none"; }, 3000);
+}
+
+// ═══════════════════════════════════════
+//  STORAGE (LocalStorage + Firestore)
+// ═══════════════════════════════════════
+function storageGet(key) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch(e) { return null; }
+}
+function storageSet(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+}
+
+function saveData() {
+  // Always save to localStorage (offline cache)
+  storageSet("inv_items", items);
+  storageSet("inv_nextId", nextId);
+  storageSet("inv_locCodes", locCodes);
+  storageSet("inv_customMatLocs", customMaterialesLocs);
+  storageSet("inv_customEqLocs", customEquiposLocs);
+
+  // Save to Firestore if available
+  if (firestoreReady && db) {
+    savingToFirestore = true;
+    ignoreNextSnapshot = true;
+    const dataDoc = {
+      items: items,
+      nextId: nextId,
+      locCodes: locCodes,
+      customMaterialesLocs: customMaterialesLocs,
+      customEquiposLocs: customEquiposLocs,
+      dataVersion: parseInt(storageGet("inv_dataVersion")) || 11,
+      lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy: navigator.userAgent.substring(0, 50)
+    };
+    db.collection("inventario").doc("data").set(dataDoc).then(() => {
+      savingToFirestore = false;
+      showSyncStatus("☁️ Sincronizado", "ok");
+    }).catch(err => {
+      savingToFirestore = false;
+      console.warn("Firestore save error:", err);
+      showSyncStatus("⚠️ Solo local", "err");
+    });
+  }
+}
+
+function applyLocalData(saved) {
+  if (saved && saved.length > 0) {
+    items = saved;
+    // Migration v9: assign sections, remove old EQ-/Ref- items
+    items = items.filter(i => {
+      if (!i.location) return true;
+      if (i.location.startsWith("EQ-") || i.location.startsWith("Ref-")) return false;
+      return true;
+    });
+    items.forEach(i => {
+      if (i.location && ["Kit A","Kit B","Kit C","Kit D","Kit E","Kit F"].includes(i.location)) {
+        i.section = "equipos";
+      } else {
+        i.section = "materiales";
+      }
+    });
+    nextId = storageGet("inv_nextId") || (Math.max(...items.map(i => parseInt(i.id)||0)) + 1);
+    const eqCount = items.filter(i => i.section === "equipos").length;
+    if (eqCount === 0) loadDefaultEquipos();
+    const dataVer = storageGet("inv_dataVersion") || 0;
+    if (dataVer < 10) {
+      const materiales = items.filter(i => i.section === "materiales");
+      items = materiales;
+      loadDefaultEquipos();
+      storageSet("inv_dataVersion", 10);
+    }
+    applyPhotoFindings();
+    // Migration v11: Replace Mesa de Fuerzas items with correct ABC manual data
+    const dataVer2 = storageGet("inv_dataVersion") || 0;
+    if (dataVer2 < 11) {
+      migrateMesaFuerzas();
+      storageSet("inv_dataVersion", 11);
+    }
+  } else {
+    loadDefaultMateriales();
+    loadDefaultEquipos();
+    storageSet("inv_dataVersion", 11);
+  }
+}
+
+// Migration v11: Replace ONLY Mesa de Fuerzas items in all kits
+// Preserves all other modules' states and all materiales data
+function migrateMesaFuerzas() {
+  const kits = ["Kit A","Kit B","Kit C","Kit D","Kit E","Kit F"];
+  // Remove all existing Mesa de Fuerzas items
+  items = items.filter(i => !(i.section === "equipos" && kits.includes(i.location) && i.drawer === "Mesa de Fuerzas"));
+  // Recalculate nextId before generating new items
+  nextId = Math.max(0, ...items.map(i => parseInt(i.id)||0)) + 1;
+  // Generate correct Mesa de Fuerzas items per ABC manual
+  kits.forEach(kit => {
+    const mfItems = getMesaFuerzasItems(kit);
+    items.push(...mfItems);
+  });
+  console.log("Migration v11: Mesa de Fuerzas items replaced with ABC manual data (" + kits.length + " kits × 15 items)");
+}
+
+function getMesaFuerzasItems(kit) {
+  const mf = "Mesa de Fuerzas";
+  const base = [];
+  let id = nextId || (Math.max(0, ...items.map(i => parseInt(i.id)||0)) + 1);
+  function add(num, name, brand, qty, status, obs) {
+    base.push({id:String(id++), name:name, brand:brand, quantity:qty, status:status, observations:obs, section:"equipos", location:kit, drawer:mf, num:num});
+    nextId = id;
+  }
+  add(1,"Soporte en hierro tipo H con 4 tornillos en la base, para su nivelación","ABC",1,"Presente","");
+  add(2,"Varilla cromada, con rosca","ABC",1,"Presente","");
+  add(3,"Arandelas en bronce, una fija y una móvil","ABC",2,"Presente","");
+  add(4,"Tuerca cabeza redonda en bronce","ABC",1,"Presente","");
+  add(5,"Mesa circular con doble graduación, divisiones de 1°, de 0 hasta 360°, plato de 30 cm de diámetro","ABC",1,"Presente","");
+  add(6,"Prensas móviles metálicas con poleas","ABC",3,"Presente","");
+  add(7,"Pesas con ranura de 200 gramos en bronce","ABC",3,"Presente","");
+  add(8,"Pesas con ranura de 100 gramos en bronce","ABC",3,"Presente","");
+  add(9,"Pesas con ranura de 50 gramos en bronce","ABC",3,"Presente","");
+  add(10,"Pesas con ranura de 20 gramos de bronce","ABC",3,"Presente","");
+  add(11,"Porta Pesas de 6 cm de largo en bronce con hilo","ABC",3,"Presente","");
+  add(12,"Platillo en acero inoxidable de 7 cm de diámetro","ABC",1,"Presente","");
+  add(13,"Anillo en cobre","ABC",1,"Presente","");
+  add(14,"Manual guía","ABC",1,"Presente","");
+  add(15,"Estuche de lujo en madera","ABC",1,"Presente","");
+  return base;
+}
+
+function loadData() {
+  // Step 1: Load from localStorage immediately (fast, offline-ready)
+  const saved = storageGet("inv_items");
+  applyLocalData(saved);
+  const savedCodes = storageGet("inv_locCodes");
+  if (savedCodes) locCodes = savedCodes;
+  const savedMatLocs = storageGet("inv_customMatLocs");
+  if (savedMatLocs) customMaterialesLocs = savedMatLocs;
+  const savedEqLocs = storageGet("inv_customEqLocs");
+  if (savedEqLocs) customEquiposLocs = savedEqLocs;
+
+  // Step 2: If Firestore is available, fetch latest data and set up real-time listener
+  if (firestoreReady && db) {
+    showSyncStatus("☁️ Conectando...", "warn");
+    // Initial fetch
+    db.collection("inventario").doc("data").get().then(doc => {
+      if (doc.exists) {
+        const d = doc.data();
+        items = d.items || [];
+        nextId = d.nextId || (Math.max(...items.map(i => parseInt(i.id)||0)) + 1);
+        locCodes = d.locCodes || {};
+        customMaterialesLocs = d.customMaterialesLocs || [];
+        customEquiposLocs = d.customEquiposLocs || [];
+        // Migration v11: fix Mesa de Fuerzas in Firestore data too
+        const fsVer = d.dataVersion || 0;
+        if (fsVer < 11) {
+          migrateMesaFuerzas();
+          saveData(); // Push corrected data back to Firestore
+          db.collection("inventario").doc("data").update({ dataVersion: 11 }).catch(()=>{});
+          storageSet("inv_dataVersion", 11);
+        }
+        // Update localStorage cache
+        storageSet("inv_items", items);
+        storageSet("inv_nextId", nextId);
+        storageSet("inv_locCodes", locCodes);
+        storageSet("inv_customMatLocs", customMaterialesLocs);
+        storageSet("inv_customEqLocs", customEquiposLocs);
+        render();
+        showSyncStatus("☁️ Sincronizado", "ok");
+      } else {
+        // No data in Firestore yet, push local data up
+        saveData();
+        showSyncStatus("☁️ Datos subidos", "ok");
+      }
+    }).catch(err => {
+      console.warn("Firestore initial load error:", err);
+      showSyncStatus("⚠️ Modo offline", "err");
+    });
+
+    // Real-time listener for changes from other devices
+    setupRealtimeSync();
+  }
+
+  // Save to localStorage (for first-time defaults)
+  storageSet("inv_items", items);
+  storageSet("inv_nextId", nextId);
+}
+
+function setupRealtimeSync() {
+  if (!firestoreReady || !db) return;
+  if (firestoreUnsubscribe) firestoreUnsubscribe(); // cleanup previous
+
+  firestoreUnsubscribe = db.collection("inventario").doc("data").onSnapshot(doc => {
+    if (!doc.exists) return;
+    // Skip if we just saved (avoid re-render loop)
+    if (ignoreNextSnapshot) {
+      ignoreNextSnapshot = false;
+      return;
+    }
+    const d = doc.data();
+    if (!d.items) return;
+
+    items = d.items;
+    nextId = d.nextId || nextId;
+    locCodes = d.locCodes || {};
+    customMaterialesLocs = d.customMaterialesLocs || [];
+    customEquiposLocs = d.customEquiposLocs || [];
+    // Update localStorage cache
+    storageSet("inv_items", items);
+    storageSet("inv_nextId", nextId);
+    storageSet("inv_locCodes", locCodes);
+    storageSet("inv_customMatLocs", customMaterialesLocs);
+    storageSet("inv_customEqLocs", customEquiposLocs);
+    render();
+    showSyncStatus("🔄 Actualizado", "ok");
+  }, err => {
+    console.warn("Firestore listener error:", err);
+  });
+}
+
+// ═══════════════════════════════════════
+//  DEFAULT MATERIALES DATA
+// ═══════════════════════════════════════
+function loadDefaultMateriales() {
+  items = [];
+  function a(loc, drawer, n, name, brand, qty, status, obs) {
+    items.push({ id: String(nextId++), section: "materiales", location: loc, drawer, num: n, name, brand: brand||"", quantity: String(qty), status, observations: obs||"" });
+  }
+
+  // ESCRITORIO
+  a("Escritorio","Cajón 1",1,"Marcadores","Genérica",6,"Presente","");
+  a("Escritorio","Cajón 1",2,"Borrador de tablero","Madcolor",4,"Presente","");
+  a("Escritorio","Cajón 1",3,"Control de televisor","LG",1,"Presente","Sin pilas");
+  a("Escritorio","Cajón 1",4,"Reglas","Genérica",4,"Presente","");
+  a("Escritorio","Cajón 1",5,"Escuadras","Genérica",3,"Presente","");
+  a("Escritorio","Cajón 1",6,"Calza tuercas","Universal",2,"Presente","");
+  a("Escritorio","Cajón 1",7,"Pie de rey","Universal",1,"Presente","");
+  a("Escritorio","Cajón 1",8,"Lupa","Genérica",1,"Presente","");
+  a("Escritorio","Cajón 1",9,"Puntero","Genérica",1,"Presente","");
+  a("Escritorio","Cajón 1",10,"Engrapadora","Genérica",1,"Desgastado","Dañada");
+  a("Escritorio","Cajón 2",1,"Manual de experimento óptica","ABC",1,"Presente","");
+  a("Escritorio","Cajón 2",2,"Manual de experimento mecánica","ABC",1,"Presente","");
+  a("Escritorio","Cajón 2",3,"Advanced Physics","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 2",4,"Physics Explorations","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 2",5,"Libro de mariposas","—",1,"Presente","");
+  a("Escritorio","Cajón 2",6,"Papeles y carpetas","—","Varios","Presente","");
+  a("Escritorio","Cajón 3",1,"(Vacío)","—","—","Nota","Cajón vacío");
+  a("Escritorio","Cajón 4",1,"Multímetro","UNI-T",1,"Presente","");
+  a("Escritorio","Cajón 4",2,"LabQuest 3","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 5",1,"Flexómetro","Variedad",7,"Presente","");
+  a("Escritorio","Cajón 5",2,"Micrómetro","UBERMANN",3,"Presente","");
+  a("Escritorio","Cajón 5",3,"Pie de rey","UBERMANN",3,"Presente","");
+  a("Escritorio","Cajón 5",4,"Pie de rey","Security",1,"Presente","");
+  a("Escritorio","Cajón 5",5,"Pie de rey","Genérica",2,"Presente","");
+  a("Escritorio","Cajón 6",1,"Multímetro","UNI-T",3,"Presente","");
+  a("Escritorio","Cajón 6",2,"Kit de soldadura","Hi-Troni",1,"Presente","Estuche");
+  a("Escritorio","Cajón 7",1,"M-OEK","Vernier",1,"Presente","Caja");
+  a("Escritorio","Cajón 7",2,"TOF-VPL","Vernier",1,"Presente","Caja");
+  a("Escritorio","Cajón 7",3,"Power Amplifier","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 7",4,"GD – Thermocouple","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 7",5,"GD – Photogate","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 7",6,"GD – Temperature","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 7",7,"GD – Energy","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 7",8,"Kit Gas Pressure","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 7",9,"GD – Magnetic Field","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 7",10,"GD – Light & Color","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 7",11,"GD – Sound","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 7",12,"GD – Static Charge","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 7",13,"GD – Gas Pressure","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 7",14,"Interface Shield","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 7",15,"Arduino","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 8",1,"Kit de imanes","Genérico",1,"Presente","Caja");
+  a("Escritorio","Cajón 8",2,"Kit jaula de Faraday","Vernier",1,"Presente","Caja");
+  a("Escritorio","Cajón 9",1,"Kit de lentes OEK","Vernier",1,"Presente","Caja");
+  a("Escritorio","Cajón 9",2,"GD – Monitor Detector","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 9",3,"GD – Rotary Motion Sensor","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 9",4,"Spring Set","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 9",5,"Instrumentation Amplifier","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 9",6,"GD – Force/Acceleration","Vernier",1,"Presente","");
+  a("Escritorio","Cajón 10",1,"Kit mesa de fuerza","AZEHEB",1,"Presente","Caja");
+  a("Escritorio","Cajón 11",1,"Mototool","DREMEL",1,"Presente","");
+  a("Escritorio","Cajón 11",2,"Manuales","Varios","Varios","Presente","");
+  a("Escritorio","Cajón 12",1,"Kit Gramera","RUISHAN",2,"Presente","1 kg, base, fuente, gramera");
+
+  // ARMARIO GRIS (vacío por ahora)
+  a("Armario Gris","Piso 1",1,"(Pendiente de inventario)","—","—","Nota","Por inventariar");
+  a("Armario Gris","Piso 2",1,"(Pendiente de inventario)","—","—","Nota","Por inventariar");
+  a("Armario Gris","Piso 3",1,"(Pendiente de inventario)","—","—","Nota","Por inventariar");
+  a("Armario Gris","Piso 4",1,"(Pendiente de inventario)","—","—","Nota","Por inventariar");
+  a("Armario Gris","Piso 5",1,"(Pendiente de inventario)","—","—","Nota","Por inventariar");
+
+
+  // Materiales por fuera
+  const mp="Materiales por fuera", md="Mesa de laboratorio";
+  a(mp,md,1,"Portalámparas con socket en base negra","",2,"Fuera","Kits B y E → B2-5, E2-5. Devueltos");
+  a(mp,md,2,"Portalámparas adicionales","",2,"Fuera","Sin kit definido");
+  a(mp,md,3,"Poleas ABC (par)","ABC",1,"Fuera","Kit E → E1-6. Devuelto");
+  a(mp,md,4,"Esferas de vidrio / matraz esférico","",2,"Dañado","Kit E → E1-3. 1 ROTA");
+  a(mp,md,5,"Espejo cóncavo en soporte metálico","",1,"Fuera","Sin kit definido (Óptica)");
+  a(mp,md,6,"Imanes en U (herradura)","",2,"Fuera","Sin kit definido (Electricidad)");
+  a(mp,md,7,"Soportes trípode negros","",3,"Fuera","Kits B, C, D o E (Mecánica)");
+  a(mp,md,8,"Soporte universal (varillas)","",1,"Fuera","Sin kit definido");
+  a(mp,md,9,"Fuente de alimentación / transformador","",1,"Fuera","Sin kit definido (Óptica)");
+  a(mp,md,10,"Péndulos de demostración","",1,"Fuera","Material de demostración");
+  a(mp,md,11,"Cajas acrílicas transparentes","",2,"Fuera","Sin kit definido");
+  a(mp,md,12,"Poleas blancas con soporte de disco","",3,"Fuera","Sacados para demostración");
+  a(mp,md,13,"Pinzas / mordazas de sujeción","",4,"Fuera","Componente genérico");
+  a(mp,md,14,"Carrete de hilo negro","",1,"Fuera","Material de consumo");
+  a(mp,md,15,"Bombilla roja en portalámpara","",1,"Fuera","Sin kit definido (Electricidad)");
+  a(mp,md,16,"Pieza negra en forma de gota / pantalla","",1,"Fuera","Posible accesorio de banco óptico");
+  a(mp,md,17,"Fuente de poder (equipo azul)","",1,"Fuera","Equipo con pantalla digital, no estándar ABC");
+  a(mp,md,18,"Figura / modelo demostrativo","",1,"Fuera","Material didáctico");
+}
+
+
+// ═══════════════════════════════════════
+//  DEFAULT EQUIPOS DATA
+// ═══════════════════════════════════════
+function loadDefaultEquipos() {
+  // Remove any existing equipos items
+  items = items.filter(i => i.section !== "equipos");
+
+  function addRef(kit, mod, n, name, brand, qty, status, obs) {
+    items.push({ id: String(nextId++), section: "equipos", location: kit, drawer: mod, num: n, name, brand: brand||"ABC", quantity: String(qty), status, observations: obs||"" });
+  }
+
+  // ABC reference data per module - same for all kits
+  function loadKitData(kit) {
+    // ── Acústica ──
+    const ac = "Acústica";
+    addRef(kit,ac,1,"Diapasón con caja de resonancia (par)","ABC",1,"Presente","");
+    addRef(kit,ac,2,"Diapasón registrador","ABC",1,"Presente","");
+    addRef(kit,ac,3,"Fonendoscopio","ABC",1,"Presente","");
+    addRef(kit,ac,4,"Lámina acrílica blanca 210 x 138 mm","ABC",1,"Presente","");
+    addRef(kit,ac,5,"Marimba","ABC",1,"Presente","");
+    addRef(kit,ac,6,"Monocordio-sonómetro","ABC",1,"Presente","Incluye: cejilla movible, vaso porta pesas");
+    addRef(kit,ac,7,"Modelo principio de teléfono","ABC",1,"Presente","");
+    addRef(kit,ac,8,"Silbato","ABC",1,"Presente","");
+    addRef(kit,ac,9,"Tubo labial abierto","ABC",1,"Presente","");
+    addRef(kit,ac,10,"Tubo labial cerrado","ABC",1,"Presente","");
+    addRef(kit,ac,11,"Estuche","ABC",1,"Presente","");
+    addRef(kit,ac,12,"Manual de experiencias","ABC",1,"Presente","");
+    addRef(kit,ac,13,"4 arandelas rígidas (Tubo de Kundt)","ABC",4,"Presente","");
+    addRef(kit,ac,14,"Base en madera con prensa (Tubo de Kundt)","ABC",1,"Presente","");
+    addRef(kit,ac,15,"Polvo de corcho o licopodio (Tubo de Kundt)","ABC",1,"Presente","");
+    addRef(kit,ac,16,"Tubo metálico (Tubo de Kundt)","ABC",1,"Presente","");
+    addRef(kit,ac,17,"Tubo en vidrio exterior (Tubo de Kundt)","ABC",1,"Presente","");
+    addRef(kit,ac,18,"Tubo en vidrio interior (Tubo de Kundt)","ABC",1,"Presente","");
+    addRef(kit,ac,19,"Varilla en madera (Tubo de Kundt)","ABC",1,"Presente","");
+    addRef(kit,ac,20,"Embudo (Tubo de Kundt)","ABC",1,"Presente","");
+    addRef(kit,ac,21,"Tapones de caucho (Tubo de Kundt)","ABC",2,"Presente","");
+
+    // ── Calorimetría ──
+    const cal = "Calorimetría";
+    addRef(kit,cal,1,"Agitador de vidrio","ABC",1,"Presente","");
+    addRef(kit,cal,2,"Anillo y bola de Gravesande","ABC",1,"Presente","");
+    addRef(kit,cal,3,"Balanza","ABC",1,"Presente","");
+    addRef(kit,cal,4,"Barra de aluminio","ABC",1,"Presente","");
+    addRef(kit,cal,5,"Barra de cobre","ABC",1,"Presente","");
+    addRef(kit,cal,6,"Barra de hierro","ABC",1,"Presente","");
+    addRef(kit,cal,7,"Base para tubo de ensayo","ABC",1,"Presente","");
+    addRef(kit,cal,8,"Calorímetro","ABC",2,"Presente","");
+    addRef(kit,cal,9,"Cinta de papel para balanza","ABC",1,"Presente","");
+    addRef(kit,cal,10,"Cuchara para quemar","ABC",1,"Presente","");
+    addRef(kit,cal,11,"Estuche","ABC",1,"Presente","");
+    addRef(kit,cal,12,"Jeringa","ABC",1,"Presente","");
+    addRef(kit,cal,13,"Lámina bimetálica","ABC",1,"Presente","");
+    addRef(kit,cal,14,"Manual de experiencias","ABC",1,"Presente","");
+    addRef(kit,cal,15,"Manguera de caucho","ABC",1,"Presente","");
+    addRef(kit,cal,16,"Matraz Erlenmeyer","ABC",2,"Presente","");
+    addRef(kit,cal,17,"Mechero de alcohol","ABC",1,"Presente","");
+    addRef(kit,cal,18,"Pinza para tubo de ensayo","ABC",1,"Presente","");
+    addRef(kit,cal,19,"Pinza para vaso de precipitado","ABC",1,"Presente","");
+    addRef(kit,cal,20,"Rejilla de asbesto","ABC",1,"Presente","");
+    addRef(kit,cal,21,"Soporte de hierro (trípode)","ABC",1,"Presente","");
+    addRef(kit,cal,22,"Soporte universal","ABC",1,"Presente","");
+    addRef(kit,cal,23,"Termómetro","ABC",1,"Presente","");
+    addRef(kit,cal,24,"Tubo capilar","ABC",1,"Presente","");
+    addRef(kit,cal,25,"Tubo de caucho","ABC",1,"Presente","");
+    addRef(kit,cal,26,"Tubo de ensayo","ABC",4,"Presente","");
+    addRef(kit,cal,27,"Tubo de vidrio en U","ABC",1,"Presente","");
+    addRef(kit,cal,28,"Vaso de precipitado 400 mL","ABC",1,"Presente","");
+    addRef(kit,cal,29,"Nivel","ABC",1,"Presente","");
+    addRef(kit,cal,30,"Varilla de agitación de vidrio","ABC",2,"Presente","");
+    addRef(kit,cal,31,"Aro soporte","ABC",1,"Presente","");
+    addRef(kit,cal,32,"Cables con caimanes","ABC",1,"Presente","");
+    addRef(kit,cal,33,"Reactivo (frasco)","ABC",2,"Presente","");
+    addRef(kit,cal,34,"Regla termométrica graduada","ABC",1,"Presente","");
+    addRef(kit,cal,35,"Varillas de soporte metálicas","ABC",2,"Presente","");
+    addRef(kit,cal,36,"Pinzas metálicas","ABC",3,"Presente","");
+    addRef(kit,cal,37,"Jeringa graduada","ABC",1,"Presente","");
+    addRef(kit,cal,38,"Tapón / accesorio circular","ABC",1,"Presente","");
+    addRef(kit,cal,39,"Malla de asbesto / rejilla","ABC",1,"Presente","");
+
+    // ── Mecánica ──
+    const mec = "Mecánica";
+    addRef(kit,mec,1,"Balín de acero","ABC",4,"Presente","");
+    addRef(kit,mec,2,"Bloque de fricción","ABC",1,"Presente","");
+    addRef(kit,mec,3,"Calibrador (pie de rey)","ABC",1,"Presente","");
+    addRef(kit,mec,4,"Carro de dinámica","ABC",2,"Presente","");
+    addRef(kit,mec,5,"Cinta métrica","ABC",1,"Presente","");
+    addRef(kit,mec,6,"Cronómetro","ABC",1,"Presente","");
+    addRef(kit,mec,7,"Dinamómetros","ABC",4,"Presente","");
+    addRef(kit,mec,8,"Esferas de madera","ABC",2,"Presente","");
+    addRef(kit,mec,9,"Juego de pesas patrón","ABC",1,"Presente","");
+    addRef(kit,mec,10,"Péndulo de Newton","ABC",1,"Presente","");
+    addRef(kit,mec,11,"Poleas simples y dobles","ABC",6,"Presente","");
+    addRef(kit,mec,12,"Regla graduada","ABC",1,"Presente","");
+    addRef(kit,mec,13,"Resortes helicoidales","ABC",2,"Presente","");
+    addRef(kit,mec,14,"Riel de aluminio graduado","ABC",1,"Presente","");
+    addRef(kit,mec,15,"Soporte trípode","ABC",1,"Presente","");
+    addRef(kit,mec,16,"Cables con caimanes","ABC",1,"Presente","");
+    addRef(kit,mec,17,"Pinzas / alicates","ABC",1,"Presente","");
+    addRef(kit,mec,18,"Disco de inercia / mesa giratoria","ABC",1,"Presente","");
+    addRef(kit,mec,19,"Mordaza / soporte de fijación","ABC",1,"Presente","");
+    addRef(kit,mec,20,"Aro metálico grande (riel circular)","ABC",1,"Presente","Aro de Muller");
+    addRef(kit,mec,21,"Discos metálicos (masas variadas)","ABC",8,"Presente","Aro de Muller");
+    addRef(kit,mec,22,"Cilindros de acoplamiento","ABC",2,"Presente","Aro de Muller");
+    addRef(kit,mec,23,"Prensa de banco / mordaza ABC","ABC",1,"Presente","Aro de Muller");
+    addRef(kit,mec,24,"Soporte con polea de borde","ABC",1,"Presente","Aro de Muller");
+    addRef(kit,mec,25,"Varillas / ejes metálicos","ABC",5,"Presente","Aro de Muller");
+    addRef(kit,mec,26,"Abrazaderas / pinzas de sujeción","ABC",3,"Presente","Aro de Muller");
+    addRef(kit,mec,27,"Portapesas con gancho","ABC",4,"Presente","");
+    addRef(kit,mec,28,"Pesas / masas ranuradas","ABC",15,"Presente","");
+    addRef(kit,mec,29,"Regla larga graduada (cinemática)","ABC",1,"Presente","");
+    addRef(kit,mec,30,"Manual de experiencias","ABC",1,"Presente","");
+    addRef(kit,mec,31,"Estuche","ABC",1,"Presente","");
+    // ── Ondas ──
+    const ond = "Ondas";
+    addRef(kit,ond,1,"Cubeta de ondas (bandeja azul con vidrio)","ABC",1,"Presente","Con barreras internas");
+    addRef(kit,ond,2,"Adaptador para fuente vibradora","ABC",1,"Presente","Con cable");
+    addRef(kit,ond,3,"Varillas de soporte (par)","ABC",2,"Presente","Negras, largas");
+    addRef(kit,ond,4,"Soporte trípode","ABC",1,"Presente","");
+    addRef(kit,ond,5,"Disco estroboscópico rojo","ABC",1,"Presente","");
+    addRef(kit,ond,6,"Pinzas / abrazaderas","ABC",2,"Presente","");
+    addRef(kit,ond,7,"Barreras y accesorios de ondas","ABC",1,"Presente","");
+    addRef(kit,ond,8,"Manual de experiencias","ABC",1,"Presente","");
+    addRef(kit,ond,9,"Estuche","ABC",1,"Presente","");
+    addRef(kit,ond,10,"Fuente vibradora","ABC",1,"Presente","");
+    addRef(kit,ond,11,"Generador de ondas","ABC",1,"Presente","");
+    addRef(kit,ond,12,"Lámina de vidrio","ABC",1,"Presente","");
+    addRef(kit,ond,13,"Pantalla de reflexión","ABC",1,"Presente","");
+    addRef(kit,ond,14,"Peine para difracción","ABC",1,"Presente","");
+    addRef(kit,ond,15,"Rendija simple y doble","ABC",1,"Presente","");
+    addRef(kit,ond,16,"Superficie de absorción","ABC",1,"Presente","");
+    addRef(kit,ond,17,"Superficie parabólica","ABC",1,"Presente","");
+    addRef(kit,ond,18,"Barrera de vidrio plana","ABC",1,"Presente","");
+    addRef(kit,ond,19,"Varilla de agitación","ABC",1,"Presente","");
+    addRef(kit,ond,20,"Nivel de burbuja","ABC",1,"Presente","");
+    addRef(kit,ond,21,"Bombilla para estroboscopio","ABC",1,"Presente","");
+    addRef(kit,ond,22,"Espejo plano","ABC",1,"Presente","");
+
+    // ── Electrónica II ──
+    const elec = "Electrónica II";
+    addRef(kit,elec,1,"Tablero de Electrónica II","ABC",1,"Presente","Con terminales, resistencias, parlante, antena");
+    addRef(kit,elec,2,"Amperímetro analógico","ABC",1,"Presente","Escala de aguja");
+    addRef(kit,elec,3,"Multímetro digital","ABC",1,"Presente","");
+    addRef(kit,elec,4,"Punta de prueba / cable con caimán","ABC",1,"Presente","");
+    addRef(kit,elec,5,"Bobinas de 400 espiras","ABC",3,"Presente","");
+    addRef(kit,elec,6,"Bobinas de 1000 espiras","ABC",2,"Presente","");
+    addRef(kit,elec,7,"Panel indicador de espiras","ABC",1,"Presente","");
+    addRef(kit,elec,8,"Portalámpara con bombilla","ABC",1,"Presente","En base negra");
+    addRef(kit,elec,9,"Bobina de cobre pequeña","ABC",1,"Presente","");
+    addRef(kit,elec,10,"Reóstato de alambre","ABC",1,"Presente","Cilíndrico");
+    addRef(kit,elec,11,"Láminas / placas rojas (electroimán)","ABC",5,"Presente","Con terminales");
+    addRef(kit,elec,12,"Imán cilíndrico","ABC",1,"Presente","");
+    addRef(kit,elec,13,"Varillas y conectores varios","ABC",4,"Presente","");
+    addRef(kit,elec,14,"Alambres de conexión (juego)","ABC",1,"Presente","");
+    addRef(kit,elec,15,"Resistencias 1/4 W (juego)","ABC",1,"Presente","");
+    addRef(kit,elec,16,"Circuitos integrados (juego)","ABC",1,"Presente","");
+    addRef(kit,elec,17,"Transistores y diodos (juego)","ABC",1,"Presente","");
+    addRef(kit,elec,18,"Condensadores (juego)","ABC",1,"Presente","");
+    addRef(kit,elec,19,"Manual de experiencias","ABC",1,"Presente","");
+    addRef(kit,elec,20,"Estuche","ABC",1,"Presente","");
+    // Additional from original Electrónica section
+    addRef(kit,elec,21,"Juego de pesas patrón (base madera)","ABC",1,"Presente","6 pesas negras");
+    addRef(kit,elec,22,"Cables de conexión con caimanes","ABC",1,"Presente","");
+    addRef(kit,elec,23,"Galvanómetro/Amperímetro de cero central","ABC",1,"Presente","");
+    addRef(kit,elec,24,"Resistencia de década","ABC",1,"Presente","");
+    addRef(kit,elec,25,"Capacitor de década","ABC",1,"Presente","");
+    addRef(kit,elec,26,"Parlante electromagnético","ABC",1,"Presente","Sobre tablero");
+
+    // ── Mesa de Fuerzas (según manual oficial ABC) ──
+    const mf = "Mesa de Fuerzas";
+    addRef(kit,mf,1,"Soporte en hierro tipo H con 4 tornillos en la base, para su nivelación","ABC",1,"Presente","");
+    addRef(kit,mf,2,"Varilla cromada, con rosca","ABC",1,"Presente","");
+    addRef(kit,mf,3,"Arandelas en bronce, una fija y una móvil","ABC",2,"Presente","");
+    addRef(kit,mf,4,"Tuerca cabeza redonda en bronce","ABC",1,"Presente","");
+    addRef(kit,mf,5,"Mesa circular con doble graduación, divisiones de 1°, de 0 hasta 360°, plato de 30 cm de diámetro","ABC",1,"Presente","");
+    addRef(kit,mf,6,"Prensas móviles metálicas con poleas","ABC",3,"Presente","");
+    addRef(kit,mf,7,"Pesas con ranura de 200 gramos en bronce","ABC",3,"Presente","");
+    addRef(kit,mf,8,"Pesas con ranura de 100 gramos en bronce","ABC",3,"Presente","");
+    addRef(kit,mf,9,"Pesas con ranura de 50 gramos en bronce","ABC",3,"Presente","");
+    addRef(kit,mf,10,"Pesas con ranura de 20 gramos de bronce","ABC",3,"Presente","");
+    addRef(kit,mf,11,"Porta Pesas de 6 cm de largo en bronce con hilo","ABC",3,"Presente","");
+    addRef(kit,mf,12,"Platillo en acero inoxidable de 7 cm de diámetro","ABC",1,"Presente","");
+    addRef(kit,mf,13,"Anillo en cobre","ABC",1,"Presente","");
+    addRef(kit,mf,14,"Manual guía","ABC",1,"Presente","");
+    addRef(kit,mf,15,"Estuche de lujo en madera","ABC",1,"Presente","");
+
+    // ── Óptica (listado oficial ABC) ──
+    const op = "Óptica";
+    addRef(kit,op,1,"Banco óptico de 50 cm","ABC",2,"Presente","");
+    addRef(kit,op,2,"Base para prisma","ABC",1,"Presente","");
+    addRef(kit,op,3,"Cubeta en acrílico para índice de refracción","ABC",1,"Presente","");
+    addRef(kit,op,4,"Disco óptico de Hartl","ABC",1,"Presente","");
+    addRef(kit,op,5,"Diodo láser","ABC",1,"Presente","");
+    addRef(kit,op,6,"Espejo angular con escala de medición","ABC",1,"Presente","");
+    addRef(kit,op,7,"Espejo cóncavo","ABC",1,"Presente","");
+    addRef(kit,op,8,"Espejo convexo","ABC",1,"Presente","");
+    addRef(kit,op,9,"Espejo plano","ABC",1,"Presente","");
+    addRef(kit,op,10,"Espejo plano con tornillo","ABC",1,"Presente","");
+    addRef(kit,op,11,"Fuente de poder 12 V","ABC",1,"Presente","");
+    addRef(kit,op,12,"Lámpara de Reuter de 12 volt / 15 watt","ABC",1,"Presente","");
+    // Juego de 6 lentes de vidrio circular
+    addRef(kit,op,13,"Lente en vidrio circular de +6","ABC",1,"Presente","Juego de lentes");
+    addRef(kit,op,14,"Lente en vidrio circular de +10","ABC",1,"Presente","Juego de lentes");
+    addRef(kit,op,15,"Lente en vidrio circular de +12","ABC",1,"Presente","Juego de lentes");
+    addRef(kit,op,16,"Lente en vidrio circular de +15","ABC",1,"Presente","Juego de lentes");
+    addRef(kit,op,17,"Lente en vidrio circular de +28","ABC",1,"Presente","Juego de lentes");
+    addRef(kit,op,18,"Lente en vidrio circular de -15","ABC",1,"Presente","Juego de lentes");
+    // Modelos ópticos geométricos
+    addRef(kit,op,19,"Lente biconvexa (modelo geométrico)","ABC",1,"Presente","Modelo óptico geométrico");
+    addRef(kit,op,20,"Lente bicóncava (modelo geométrico)","ABC",1,"Presente","Modelo óptico geométrico");
+    addRef(kit,op,21,"Lente plano convexo (modelo geométrico)","ABC",1,"Presente","Modelo óptico geométrico");
+    addRef(kit,op,22,"Prisma isósceles (modelo geométrico)","ABC",1,"Presente","Modelo óptico geométrico");
+    addRef(kit,op,23,"Prisma triangular (modelo geométrico)","ABC",1,"Presente","Modelo óptico geométrico");
+    addRef(kit,op,24,"Prisma trapezoidal (modelo geométrico)","ABC",1,"Presente","Modelo óptico geométrico");
+    addRef(kit,op,25,"Pantalla de proyección","ABC",1,"Presente","");
+    addRef(kit,op,26,"Porta placas","ABC",1,"Presente","");
+    // Juego de 11 placas
+    addRef(kit,op,27,"Placa de 1 ranura en línea","ABC",1,"Presente","Juego de 11 placas");
+    addRef(kit,op,28,"Placa de 5 ranuras en línea","ABC",1,"Presente","Juego de 11 placas");
+    addRef(kit,op,29,"Placa de 3 ranuras en línea","ABC",1,"Presente","Juego de 11 placas");
+    addRef(kit,op,30,"Placa de 1 ranura en L","ABC",1,"Presente","Juego de 11 placas");
+    addRef(kit,op,31,"Placa de 1 orificio pequeño 1.35 mm","ABC",1,"Presente","Juego de 11 placas");
+    addRef(kit,op,32,"Placa de 1 orificio regular 2 mm","ABC",1,"Presente","Juego de 11 placas");
+    addRef(kit,op,33,"Placa de 1 orificio circular mayor 2.7 mm","ABC",1,"Presente","Juego de 11 placas");
+    addRef(kit,op,34,"Placa de 5 orificios regulares","ABC",1,"Presente","Juego de 11 placas");
+    addRef(kit,op,35,"Placa en acrílico de color azul","ABC",1,"Presente","Juego de 11 placas");
+    addRef(kit,op,36,"Placa en acrílico de color verde","ABC",1,"Presente","Juego de 11 placas");
+    addRef(kit,op,37,"Placa en acrílico de color rojo","ABC",1,"Presente","Juego de 11 placas");
+    addRef(kit,op,38,"Solución para índice de refracción y fenómeno de Tyndall","ABC",1,"Presente","");
+    addRef(kit,op,39,"Soporte para diodo láser en acrílico","ABC",1,"Presente","");
+    addRef(kit,op,40,"Soporte para disco óptico","ABC",1,"Presente","");
+    addRef(kit,op,41,"Soportes para banco óptico","ABC",4,"Presente","");
+    addRef(kit,op,42,"Estuche de lujo","ABC",1,"Presente","");
+    addRef(kit,op,43,"Manual de experiencias","ABC",1,"Presente","");
+
+    // ── Electricidad y Magnetismo ──
+    const em = "Electricidad y Magnetismo";
+    addRef(kit,em,1,"Fuente de poder DC 4 Amp","ABC",1,"Presente","Con voltímetro analógico");
+    addRef(kit,em,2,"Bombilla con socket y cables caimán","ABC",1,"Presente","");
+    addRef(kit,em,3,"Imanes de barra","ABC",2,"Presente","");
+    addRef(kit,em,4,"Cables de conexión con caimanes","ABC",1,"Presente","Rojo/negro");
+    addRef(kit,em,5,"Soportes trípode","ABC",2,"Presente","");
+    addRef(kit,em,6,"Poleas ABC (par)","ABC",2,"Presente","");
+    addRef(kit,em,7,"Brújula","ABC",1,"Presente","");
+    addRef(kit,em,8,"Electroimán","ABC",1,"Presente","");
+    addRef(kit,em,9,"Galvanómetro","ABC",1,"Presente","");
+    addRef(kit,em,10,"Interruptor","ABC",1,"Presente","");
+    addRef(kit,em,11,"Bombillos (juego)","ABC",3,"Presente","");
+    addRef(kit,em,12,"Resistencias (juego)","ABC",1,"Presente","");
+    addRef(kit,em,13,"Condensadores (juego)","ABC",1,"Presente","");
+    addRef(kit,em,14,"Imanes en herradura","ABC",2,"Presente","");
+    addRef(kit,em,15,"Núcleo de hierro dulce","ABC",1,"Presente","");
+    addRef(kit,em,16,"Barras para electrostática","ABC",2,"Presente","");
+    addRef(kit,em,17,"Paños de frotamiento","ABC",2,"Presente","");
+  }
+
+  // Generate data for all 6 kits
+  ["Kit A","Kit B","Kit C","Kit D","Kit E","Kit F"].forEach(kit => loadKitData(kit));
+
+  // Apply photo review findings
+  applyPhotoFindings();
+}
+
+// ═══════════════════════════════════════
+//  PHOTO REVIEW FINDINGS (Sep 2026)
+// ═══════════════════════════════════════
+function applyPhotoFindings() {
+  // Helper: find item by kit, module, and item number, then update status + obs
+  function mark(kit, mod, num, status, obs) {
+    const it = items.find(i => i.section==="equipos" && i.location===kit && i.drawer===mod && i.num===num);
+    if (it) { it.status = status; if (obs) it.observations = obs; }
+  }
+
+  const allKits = ["Kit A","Kit B","Kit C","Kit D","Kit E","Kit F"];
+  const em = "Electricidad y Magnetismo";
+  const ond = "Ondas";
+  const mf = "Mesa de Fuerzas";
+  const cal = "Calorimetría";
+  const mec = "Mecánica";
+  const op = "Óptica";
+
+  // ══ ELECTRICIDAD Y MAGNETISMO — Todos los kits ══
+  // Cajones consistentemente semivacíos. Solo visibles: fuente, trípodes, cables, imanes barra.
+  allKits.forEach(kit => {
+    mark(kit,em,7,"Faltante","No visible en revisión fotográfica");  // Brújula
+    mark(kit,em,8,"Faltante","No visible en revisión fotográfica");  // Electroimán
+    mark(kit,em,9,"Faltante","No visible en revisión fotográfica");  // Galvanómetro
+    mark(kit,em,10,"Faltante","No visible en revisión fotográfica"); // Interruptor
+    mark(kit,em,11,"Faltante","No visible en revisión fotográfica"); // Bombillos juego
+    mark(kit,em,12,"Faltante","No visible en revisión fotográfica"); // Resistencias
+    mark(kit,em,13,"Faltante","No visible en revisión fotográfica"); // Condensadores
+    mark(kit,em,14,"Faltante","No visible en revisión fotográfica"); // Imanes herradura
+    mark(kit,em,15,"Faltante","No visible en revisión fotográfica"); // Núcleo hierro dulce
+    mark(kit,em,16,"Faltante","No visible en revisión fotográfica"); // Barras electrostática
+    mark(kit,em,17,"Faltante","No visible en revisión fotográfica"); // Paños frotamiento
+  });
+
+  // ══ CUBETA DE ONDAS — Todos los kits ══
+  // Consistentemente faltan la mayoría de accesorios
+  allKits.forEach(kit => {
+    mark(kit,ond,8,"Faltante","No visible en revisión fotográfica");  // Manual
+    mark(kit,ond,9,"Faltante","No visible en revisión fotográfica");  // Estuche
+    mark(kit,ond,11,"Faltante","No visible en revisión fotográfica"); // Generador ondas
+    mark(kit,ond,12,"Faltante","No visible en revisión fotográfica"); // Lámina vidrio
+    mark(kit,ond,13,"Faltante","No visible en revisión fotográfica"); // Pantalla reflexión
+    mark(kit,ond,14,"Faltante","No visible en revisión fotográfica"); // Peine difracción
+    mark(kit,ond,15,"Faltante","No visible en revisión fotográfica"); // Rendija simple/doble
+    mark(kit,ond,16,"Faltante","No visible en revisión fotográfica"); // Superficie absorción
+    mark(kit,ond,18,"Faltante","No visible en revisión fotográfica"); // Barrera vidrio plana
+    mark(kit,ond,19,"Faltante","No visible en revisión fotográfica"); // Varilla agitación
+    mark(kit,ond,20,"Faltante","No visible en revisión fotográfica"); // Nivel burbuja
+    mark(kit,ond,21,"Faltante","No visible en revisión fotográfica"); // Bombilla estroboscopio
+    mark(kit,ond,22,"Faltante","No visible en revisión fotográfica"); // Espejo plano
+  });
+  // Fuente vibradora: faltante en F, A, C
+  ["Kit F","Kit A","Kit C"].forEach(kit => {
+    mark(kit,ond,10,"Faltante","No visible en revisión fotográfica");
+  });
+  // Disco estroboscópico: faltante en A, B
+  ["Kit A","Kit B"].forEach(kit => {
+    mark(kit,ond,5,"Faltante","No visible en revisión fotográfica");
+  });
+  // Superficie parabólica: faltante en todos excepto D
+  ["Kit A","Kit B","Kit C","Kit E","Kit F"].forEach(kit => {
+    mark(kit,ond,17,"Faltante","No visible en revisión fotográfica");
+  });
+
+  // ══ MESA DE FUERZAS ══
+  // (Datos corregidos en migración v11 con ítems del manual oficial ABC.
+  //  Los estados deben verificarse manualmente con la nueva lista.)
+
+  // ══ CALORIMETRÍA — Todos los kits ══
+  // Mechero y termómetro nunca visibles
+  allKits.forEach(kit => {
+    mark(kit,cal,17,"Posible faltante","No visible en revisión fotográfica — puede estar guardado");  // Mechero
+    mark(kit,cal,23,"Posible faltante","No visible en revisión fotográfica — puede estar guardado");  // Termómetro
+  });
+  // Lámina bimetálica: posible faltante en todos excepto E
+  ["Kit A","Kit B","Kit C","Kit D","Kit F"].forEach(kit => {
+    mark(kit,cal,13,"Posible faltante","No visible en revisión fotográfica");
+  });
+  // Anillo y bola de Gravesande: no visible en D
+  mark("Kit D",cal,2,"Posible faltante","No claramente visible en revisión fotográfica");
+  // Manual Calorimetría: no visible en A, B, D, F
+  ["Kit A","Kit B","Kit D","Kit F"].forEach(kit => {
+    mark(kit,cal,14,"Posible faltante","No visible en revisión fotográfica");
+  });
+  // Soporte trípode: no visible en E y F
+  ["Kit E","Kit F"].forEach(kit => {
+    mark(kit,cal,21,"Posible faltante","No visible en cajón de calorimetría");
+  });
+  // Nivel: no visible en A, E, F
+  ["Kit A","Kit E","Kit F"].forEach(kit => {
+    mark(kit,cal,29,"Posible faltante","No visible en revisión fotográfica");
+  });
+
+  // ══ MECÁNICA — Kit C ══
+  // Péndulo de Newton faltante solo en Kit C
+  mark("Kit C",mec,10,"Faltante","No visible en revisión fotográfica — faltante significativo");
+  // Cronómetro y pesas patrón dudosos en Kit C
+  mark("Kit C",mec,6,"Posible faltante","No claramente visible en revisión fotográfica");
+  mark("Kit C",mec,9,"Posible faltante","No claramente visible en revisión fotográfica");
+  // Segundo carro no visible en C y D
+  // (ya están como qty 2 con status Presente, marcamos observación)
+
+  // ══ ÓPTICA — Kit C ══
+  // Pantalla manchada
+  mark("Kit C",op,25,"Desgastado","Pantalla de proyección manchada con salpicaduras blancas");
+}
+
+// ═══════════════════════════════════════
+//  RENDERING
+// ═══════════════════════════════════════
+function getLocs() {
+  if (section === "equipos") return [...EQUIPOS_LOCATIONS, ...customEquiposLocs];
+  return [...MATERIALES_LOCATIONS, ...customMaterialesLocs];
+}
+function isCustomLoc(locId) {
+  return customMaterialesLocs.some(l=>l.id===locId) || customEquiposLocs.some(l=>l.id===locId);
+}
+function sectionItems() { return items.filter(i => i.section === section); }
+
+function switchSection(s) {
+  section = s;
+  viewMode = "dashboard";
+  currentLoc = null;
+  currentDrawer = null;
+  currentFilter = null;
+  document.getElementById("searchInput").value = "";
+  render();
+}
+
+function renderSidebar() {
+  const nav = document.getElementById("sidebarNav");
+  const locs = getLocs();
+  const si = sectionItems();
+
+  // Section tabs
+  document.getElementById("tabMateriales").classList.toggle("active", section==="materiales");
+  document.getElementById("tabEquipos").classList.toggle("active", section==="equipos");
+
+
+
+  let html = '';
+  // Dashboard link
+  const dashActive = viewMode === "dashboard";
+  html += `<div class="nav-group"><div class="nav-item${dashActive?' active':''}" onclick="goToDashboard()">
+    <span>&#x1F4CA;</span><span>Resumen</span><span class="nav-badge">${si.length}</span>
+  </div></div>`;
+
+  locs.forEach(loc => {
+    const count = si.filter(i => i.location === loc.id).length;
+    const isActive = currentLoc === loc.id && !currentDrawer && (viewMode==="list" || viewMode==="drawers");
+    html += `<div class="nav-group">`;
+    const isCustom = isCustomLoc(loc.id);
+    html += `<div class="nav-item${isActive?' active':''}" onclick="goToLoc('${esc(loc.id)}')">
+      <span>${loc.icon}</span><span>${esc(loc.name)}${locCodes[loc.id]?'<span class="nav-code">'+esc(locCodes[loc.id])+'</span>':''}</span>
+      ${isCustom?`<span class="loc-actions"><button class="loc-act-btn" onclick="event.stopPropagation();openLocModal('${esc(loc.id)}')" title="Editar">✎</button><button class="loc-act-btn del" onclick="event.stopPropagation();deleteLoc('${esc(loc.id)}')" title="Eliminar">✕</button></span>`:''}
+      <span class="nav-badge">${count}</span>
+    </div>`;
+    if (currentLoc === loc.id && (viewMode==="list" || viewMode==="drawers")) {
+      html += `<div class="nav-sub">`;
+      loc.drawers.forEach(d => {
+        const dCount = si.filter(i => i.location === loc.id && i.drawer === d).length;
+        const isActiveD = currentDrawer === d;
+        const hasIssue = si.some(i => i.location === loc.id && i.drawer === d && ["Posible faltante","Dañado","Faltante"].includes(i.status));
+        html += `<div class="nav-item${isActiveD?' active':''}" onclick="goToDrawer('${esc(loc.id)}','${esc(d)}')">
+          <span class="nav-dot" style="background:${hasIssue?'var(--red)':'var(--green)'}"></span>
+          <span>${esc(d.split(' ')[0])}</span>
+          <span class="nav-badge">${dCount}</span>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+    html += `</div>`;
+  });
+
+  // Botón para agregar nueva ubicación
+  html += `<div class="loc-mgmt-btn" onclick="openLocModal()">+ Nueva ubicación</div>`;
+
+  nav.innerHTML = html;
+
+  // Footer
+  document.getElementById("footerCount").textContent = `${si.length} ítems`;
+}
+
+function renderTopbar() {
+  const tb = document.getElementById("topbar");
+  let titleHtml = '';
+  if (viewMode === "dashboard") {
+    titleHtml = section === "equipos" ? "Equipos — Referencia ABC" : "Materiales — Inventario";
+  } else if (viewMode === "drawers") {
+    const locObj = getLocs().find(l => l.id === currentLoc);
+    titleHtml = locObj ? esc(locObj.name) : esc(currentLoc || '');
+    titleHtml += `<span class="topbar-crumb">Inventario${locCodes[currentLoc]?' · '+esc(locCodes[currentLoc]):''}</span> <button class="btn btn-sm" onclick="editLocCode('${esc(currentLoc)}')" style="font-size:11px;padding:2px 8px">Código inv.</button>`;
+  } else {
+    titleHtml = currentDrawer ? esc(currentDrawer) : esc(currentLoc || '');
+    if (currentLoc && !currentDrawer) {
+      titleHtml += `<span class="topbar-crumb">Inventario${locCodes[currentLoc]?' · '+esc(locCodes[currentLoc]):''}</span> <button class="btn btn-sm" onclick="editLocCode('${esc(currentLoc)}')" style="font-size:11px;padding:2px 8px">Código inv.</button>`;
+    } else if (currentDrawer) {
+      titleHtml += `<span class="topbar-crumb">${esc(currentLoc)}</span>`;
+    }
+  }
+
+  let filtered;
+  if (viewMode === "list") filtered = getFiltered();
+  else if (viewMode === "drawers") filtered = sectionItems().filter(i => i.location === currentLoc);
+  else filtered = sectionItems();
+  const pres = filtered.filter(i=>i.status==="Presente").length;
+  const desg = filtered.filter(i=>i.status==="Desgastado").length;
+  const bad = filtered.filter(i=>["Posible faltante","Dañado","Faltante"].includes(i.status)).length;
+
+  tb.innerHTML = `
+    <button class="btn-mobile-menu" onclick="toggleMobile()">&#9776;</button>
+    <span class="topbar-title" id="topTitle">${titleHtml}</span>
+    <div class="stat-pills">
+      <span class="stat-pill pill-ok">${pres} OK</span>
+      ${desg?`<span class="stat-pill pill-warn">${desg}</span>`:''}
+      ${bad?`<span class="stat-pill pill-bad">${bad}</span>`:''}
+    </div>
+    <button class="btn btn-accent btn-sm" onclick="openAddModal()">+ Agregar</button>
+    <button class="btn btn-sm" onclick="exportCSV()">CSV</button>
+    ${viewMode!=="dashboard"?`<button class="btn btn-sm" onclick="goToDashboard()">Resumen</button>`:''}
+  `;
+}
+
+function renderContent() {
+  const el = document.getElementById("content");
+  if (viewMode === "dashboard") {
+    renderDashboard(el);
+  } else if (viewMode === "drawers") {
+    renderDrawersView(el);
+  } else {
+    renderTable(el);
+  }
+}
+
+function renderDrawersView(el) {
+  const loc = getLocs().find(l => l.id === currentLoc);
+  if (!loc) { renderDashboard(el); return; }
+  const si = sectionItems().filter(i => i.location === currentLoc);
+  const total = si.length;
+  const pres = si.filter(i=>i.status==="Presente").length;
+  const desg = si.filter(i=>i.status==="Desgastado").length;
+  const bad = si.filter(i=>["Posible faltante","Dañado","Faltante"].includes(i.status)).length;
+
+  let html = `<div class="dashboard-grid" style="margin-bottom:20px">
+    <div class="dash-card"><div class="dash-card-label">Total ítems</div><div class="dash-card-value">${total}</div></div>
+    <div class="dash-card"><div class="dash-card-label">Presente</div><div class="dash-card-value ok">${pres}</div></div>
+    ${desg?`<div class="dash-card"><div class="dash-card-label">Desgastado</div><div class="dash-card-value warn">${desg}</div></div>`:''}
+    ${bad?`<div class="dash-card"><div class="dash-card-label">Faltante / Dañado</div><div class="dash-card-value bad">${bad}</div></div>`:''}
+  </div>`;
+
+  html += `<div class="dash-section-title">${loc.drawers[0]?.startsWith("Piso")||loc.drawers[0]?.startsWith("Cajón")? "Pisos / Cajones" : section==="equipos" ? "Módulos" : "Secciones"} (${loc.drawers.length})</div>`;
+  html += `<div class="dash-locations">`;
+  loc.drawers.forEach(d => {
+    const di = si.filter(i => i.drawer === d);
+    const ct = di.length;
+    const okC = di.filter(i=>i.status==="Presente").length;
+    const warnC = di.filter(i=>i.status==="Desgastado").length;
+    const badC = di.filter(i=>["Posible faltante","Dañado","Faltante"].includes(i.status)).length;
+    const okP = ct ? (okC/ct*100) : 0;
+    const warnP = ct ? (warnC/ct*100) : 0;
+    const badP = ct ? (badC/ct*100) : 0;
+    const icon = section==="equipos" ? "📋" : d.startsWith("Piso")?"📂":"🗂";
+    html += `<div class="dash-loc" onclick="goToDrawer('${esc(currentLoc)}','${esc(d)}')">
+      <span class="dash-loc-icon">${icon}</span>
+      <div class="dash-loc-info">
+        <div class="dash-loc-name">${esc(d)}</div>
+        <div class="dash-loc-count">${ct} ítems</div>
+        ${ct?`<div class="dash-loc-bar">
+          <span class="bar-ok" style="width:${okP}%"></span>
+          <span class="bar-warn" style="width:${warnP}%"></span>
+          <span class="bar-bad" style="width:${badP}%"></span>
+        </div>`:''}
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // Items needing attention in this location
+  const attention = si.filter(i=>["Posible faltante","Dañado","Faltante"].includes(i.status));
+  if (attention.length) {
+    html += `<div class="dash-section-title" style="margin-top:20px">Requieren atención (${attention.length})</div>`;
+    html += `<div class="tbl-wrap"><div class="tbl-scroll"><table>
+      <thead><tr><th>${section==="equipos"?"Módulo":"Cajón"}</th><th>N.°</th><th>Material</th><th>Estado</th><th>Observaciones</th></tr></thead><tbody>`;
+    attention.forEach(i => {
+      html += `<tr style="cursor:pointer" onclick="goToDrawer('${esc(i.location)}','${esc(i.drawer)}')">
+        <td style="font-family:var(--mono);font-size:12px">${esc(i.drawer)}</td>
+        <td class="qty">${i.num}</td>
+        <td>${esc(i.name)}</td>
+        <td><span class="status-tag ${STATUS_CLS[i.status]||''}">${esc(i.status)}</span></td>
+        <td style="font-size:12px;color:var(--text-sec)">${esc(i.observations)}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div></div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function renderDashboard(el) {
+  const si = sectionItems();
+  const total = si.length;
+  const pres = si.filter(i=>i.status==="Presente").length;
+  const desg = si.filter(i=>i.status==="Desgastado").length;
+  const falt = si.filter(i=>["Posible faltante","Faltante"].includes(i.status)).length;
+  const dan = si.filter(i=>i.status==="Dañado").length;
+  const fuera = si.filter(i=>i.status==="Fuera").length;
+  const nota = si.filter(i=>i.status==="Nota").length;
+
+  let html = `<div class="dashboard-grid">
+    <div class="dash-card"><div class="dash-card-label">Total registrado</div><div class="dash-card-value">${total}</div><div class="dash-card-sub">ítems del laboratorio</div></div>
+    <div class="dash-card"><div class="dash-card-label">Presente</div><div class="dash-card-value ok">${pres}</div><div class="dash-card-sub">${total?Math.round(pres/total*100):0}% del total</div></div>
+    <div class="dash-card"><div class="dash-card-label">Desgastado</div><div class="dash-card-value warn">${desg}</div><div class="dash-card-sub">requieren atención</div></div>
+    <div class="dash-card"><div class="dash-card-label">Faltante / Dañado</div><div class="dash-card-value bad">${falt+dan}</div><div class="dash-card-sub">${falt} posibles faltantes (huecos vacíos en espuma), ${dan} dañados</div></div>
+  </div>`;
+
+  if (fuera > 0 || nota > 0) {
+    html += `<div class="dashboard-grid" style="margin-bottom:24px">`;
+    if (fuera) html += `<div class="dash-card"><div class="dash-card-label">Fuera de kit</div><div class="dash-card-value" style="color:var(--amber)">${fuera}</div></div>`;
+    if (nota) html += `<div class="dash-card"><div class="dash-card-label">Notas</div><div class="dash-card-value" style="color:var(--purple)">${nota}</div></div>`;
+    html += `</div>`;
+  }
+
+  html += `<div class="dash-section-title">Ubicaciones</div><div class="dash-locations">`;
+  const locs = getLocs();
+  locs.forEach(loc => {
+    const li = si.filter(i=>i.location===loc.id);
+    const ct = li.length;
+    const okC = li.filter(i=>i.status==="Presente").length;
+    const warnC = li.filter(i=>i.status==="Desgastado").length;
+    const badC = li.filter(i=>["Posible faltante","Dañado","Faltante"].includes(i.status)).length;
+    const okP = ct ? (okC/ct*100) : 0;
+    const warnP = ct ? (warnC/ct*100) : 0;
+    const badP = ct ? (badC/ct*100) : 0;
+    const isC = isCustomLoc(loc.id);
+    html += `<div class="dash-loc" onclick="goToLoc('${esc(loc.id)}')" style="position:relative">
+      <span class="dash-loc-icon">${loc.icon}</span>
+      <div class="dash-loc-info">
+        <div class="dash-loc-name">${esc(loc.name)}${locCodes[loc.id]?' <span style="font-family:var(--mono);font-size:11px;color:var(--text-dim);font-weight:400">'+esc(locCodes[loc.id])+'</span>':' <span style="font-size:11px;color:var(--text-dim);font-style:italic">Sin código</span>'}${isC?'<span class="loc-actions" style="display:inline-flex;vertical-align:middle;margin-left:6px"><button class="loc-act-btn" onclick="event.stopPropagation();openLocModal(\''+esc(loc.id)+'\')" title="Editar">✎</button><button class="loc-act-btn del" onclick="event.stopPropagation();deleteLoc(\''+esc(loc.id)+'\')" title="Eliminar">✕</button></span>':''}</div>
+        <div class="dash-loc-count">${ct} ítems · ${loc.drawers.length} ${loc.drawers[0]?.startsWith("Piso")?"pisos":section==="equipos"?"módulos":"secciones"}</div>
+        ${ct?`<div class="dash-loc-bar">
+          <span class="bar-ok" style="width:${okP}%"></span>
+          <span class="bar-warn" style="width:${warnP}%"></span>
+          <span class="bar-bad" style="width:${badP}%"></span>
+        </div>`:''}
+      </div>
+    </div>`;
+  });
+  html += `<div class="dash-loc" onclick="openLocModal()" style="border:2px dashed var(--border);background:transparent;cursor:pointer;justify-content:center;min-height:60px">
+    <span style="font-size:20px;color:var(--accent)">+</span>
+    <div class="dash-loc-info">
+      <div class="dash-loc-name" style="color:var(--accent)">Nueva ubicación</div>
+    </div>
+  </div>`;
+  html += `</div>`;
+
+  // Items needing attention
+  const attention = si.filter(i=>["Posible faltante","Dañado","Faltante"].includes(i.status));
+  if (attention.length) {
+    html += `<div class="dash-section-title">Requieren atención (${attention.length})</div>`;
+    html += `<div class="tbl-wrap"><div class="tbl-scroll"><table>
+      <thead><tr><th>Ubicación</th><th>Cajón</th><th>Material</th><th>Estado</th><th>Qué falta / Problema</th></tr></thead><tbody>`;
+    attention.forEach(i => {
+      html += `<tr style="cursor:pointer" onclick="goToDrawer('${esc(i.location)}','${esc(i.drawer)}')">
+        <td>${esc(i.location)}</td>
+        <td style="font-family:var(--mono);font-size:12px">${esc(i.drawer.split(' ')[0])}</td>
+        <td>${esc(i.name)}</td>
+        <td><span class="status-tag ${STATUS_CLS[i.status]||''}">${esc(i.status)}</span></td>
+        <td style="font-size:12px;color:var(--text-sec)">${esc(i.observations)}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div></div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function renderTable(el) {
+  const filtered = getFiltered();
+  if (filtered.length === 0) {
+    el.innerHTML = `<div class="empty">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4M4 7l8 4M4 7v10l8 4m0-10v10"/></svg>
+      <h3>Sin elementos</h3>
+      <p>Usa "+ Agregar" para registrar el primer ítem en esta ubicación.</p>
+    </div>`;
+    return;
+  }
+
+  // Filter chips
+  let chipHtml = `<div class="filter-bar">
+    <span class="filter-chip${!currentFilter?' active':''}" onclick="setFilter(null)">Todos (${filtered.length})</span>`;
+  STATUSES.forEach(s => {
+    const c = filtered.filter(i=>i.status===s).length;
+    if(c) chipHtml += `<span class="filter-chip${currentFilter===s?' active':''}" onclick="setFilter('${s}')">${s} (${c})</span>`;
+  });
+  chipHtml += `</div>`;
+
+  const display = currentFilter ? filtered.filter(i=>i.status===currentFilter) : filtered;
+
+  let tHtml = `<div class="tbl-wrap"><div class="tbl-scroll"><table>
+    <thead><tr>
+      <th style="width:36px">N.°</th>
+      <th>Material / Elemento</th>
+      <th>Marca</th>
+      <th style="width:55px">Cant.</th>
+      <th style="width:110px">Estado</th>
+      <th>Observaciones</th>
+      <th style="width:60px"></th>
+    </tr></thead><tbody>`;
+
+  display.forEach(item => {
+    tHtml += `<tr>
+      <td class="qty">${item.num}</td>
+      <td><span class="editable" onclick="editField('${item.id}','name')">${esc(item.name)}</span></td>
+      <td><span class="editable" onclick="editField('${item.id}','brand')">${esc(item.brand)||'—'}</span></td>
+      <td class="qty"><span class="editable" onclick="editField('${item.id}','quantity')">${esc(String(item.quantity))}</span></td>
+      <td><span class="status-tag ${STATUS_CLS[item.status]||''}" onclick="editStatus('${item.id}', event)">${esc(item.status)}</span></td>
+      <td style="font-size:12px"><span class="editable" onclick="editField('${item.id}','observations')">${esc(item.observations)||'—'}</span></td>
+      <td><div class="row-actions">
+        <button class="row-act" onclick="openEditModal('${item.id}')" title="Editar">&#9998;</button>
+        <button class="row-act del" onclick="deleteItem('${item.id}')" title="Eliminar">&#10005;</button>
+      </div></td>
+    </tr>`;
+  });
+  tHtml += `</tbody></table></div></div>`;
+
+  el.innerHTML = chipHtml + tHtml;
+}
+
+function getFiltered() {
+  const si = sectionItems();
+  const search = document.getElementById("searchInput").value.toLowerCase().trim();
+  if (search) {
+    return si.filter(i =>
+      i.name.toLowerCase().includes(search) ||
+      i.brand.toLowerCase().includes(search) ||
+      i.observations.toLowerCase().includes(search) ||
+      i.drawer.toLowerCase().includes(search) ||
+      i.location.toLowerCase().includes(search)
+    ).sort((a,b)=>a.num-b.num);
+  }
+  let r = si;
+  if (currentLoc) r = r.filter(i=>i.location===currentLoc);
+  if (currentDrawer) r = r.filter(i=>i.drawer===currentDrawer);
+  return r.sort((a,b)=>a.num-b.num);
+}
+
+function render() { renderSidebar(); renderTopbar(); renderContent(); }
+
+// ═══════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════
+
+
+function goToDashboard() {
+  viewMode = "dashboard";
+  currentLoc = null;
+  currentDrawer = null;
+  currentFilter = null;
+  render();
+  closeMobile();
+}
+
+function goToLoc(loc) {
+  viewMode = "drawers";
+  currentLoc = loc;
+  currentDrawer = null;
+  currentFilter = null;
+  render();
+  closeMobile();
+}
+
+function goToDrawer(loc, drawer) {
+  viewMode = "list";
+  currentLoc = loc;
+  currentDrawer = drawer;
+  currentFilter = null;
+  render();
+  closeMobile();
+}
+
+function setFilter(f) { currentFilter = f; renderContent(); }
+
+document.getElementById("searchInput").addEventListener("input", function() {
+  if (this.value.trim()) { viewMode = "list"; currentLoc = null; currentDrawer = null; currentFilter = null; }
+  render();
+});
+
+// ═══════════════════════════════════════
+//  INLINE EDITING
+// ═══════════════════════════════════════
+function editField(id, field) {
+  const item = items.find(i=>i.id===id);
+  if(!item) return;
+  const labels = {name:"Nombre del material:",brand:"Marca:",quantity:"Cantidad:",observations:"Observaciones:"};
+  const val = prompt(labels[field]||field, item[field]);
+  if(val!==null){ item[field]=val; saveData(); render(); toast("Actualizado"); }
+}
+
+function editStatus(id, event) {
+  const item = items.find(i=>i.id===id);
+  if(!item) return;
+  // Remove any existing dropdown
+  closeStatusDropdown();
+
+  const STATUS_COLORS = {
+    "Presente":"var(--green)","Desgastado":"var(--amber)",
+    "Posible faltante":"var(--red)","Dañado":"var(--red)",
+    "Nota":"var(--purple)","Faltante":"var(--red)","Fuera":"var(--amber)"
+  };
+
+  // Create overlay to close on outside click
+  const overlay = document.createElement('div');
+  overlay.className = 'status-dropdown-overlay';
+  overlay.onclick = closeStatusDropdown;
+  document.body.appendChild(overlay);
+
+  // Create dropdown
+  const dd = document.createElement('div');
+  dd.className = 'status-dropdown';
+  dd.id = 'activeStatusDropdown';
+  STATUSES.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'status-dropdown-item' + (s === item.status ? ' selected' : '');
+    btn.innerHTML = `<span class="status-dropdown-dot" style="background:${STATUS_COLORS[s]||'var(--text-dim)'}"></span>${s}${s === item.status ? ' ✓' : ''}`;
+    btn.onclick = function(e) {
+      e.stopPropagation();
+      item.status = s;
+      saveData();
+      closeStatusDropdown();
+      render();
+      toast("Estado: " + s);
+    };
+    dd.appendChild(btn);
+  });
+
+  // Position near the clicked element
+  const rect = event.target.closest('.status-tag').getBoundingClientRect();
+  dd.style.position = 'fixed';
+  dd.style.left = rect.left + 'px';
+  dd.style.top = (rect.bottom + 4) + 'px';
+  // Ensure it doesn't go off screen
+  document.body.appendChild(dd);
+  const ddRect = dd.getBoundingClientRect();
+  if (ddRect.right > window.innerWidth - 8) {
+    dd.style.left = Math.max(8, window.innerWidth - ddRect.width - 8) + 'px';
+  }
+  if (ddRect.bottom > window.innerHeight - 8) {
+    dd.style.top = (rect.top - ddRect.height - 4) + 'px';
+  }
+}
+
+function closeStatusDropdown() {
+  const dd = document.getElementById('activeStatusDropdown');
+  if (dd) dd.remove();
+  const overlay = document.querySelector('.status-dropdown-overlay');
+  if (overlay) overlay.remove();
+}
+
+// ═══════════════════════════════════════
+//  MODALS
+// ═══════════════════════════════════════
+function openAddModal() {
+  const locs = getLocs();
+  const loc = currentLoc || locs[0]?.id || "";
+  const drawer = currentDrawer || (locs.find(l=>l.id===loc)?.drawers[0] || "");
+  const maxNum = Math.max(0, ...sectionItems().filter(i=>i.location===loc&&i.drawer===drawer).map(i=>i.num));
+
+  document.getElementById("modalBox").innerHTML = `
+    <div class="modal-head"><h2>Agregar ítem</h2><button class="modal-x" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="fg-row">
+        <div class="fg"><label>Ubicación</label><select id="f-loc" onchange="onLocChange()">${locs.map(l=>`<option value="${esc(l.id)}"${l.id===loc?' selected':''}>${esc(l.name)}</option>`).join('')}</select></div>
+        <div class="fg"><label>Cajón / Piso</label><select id="f-dr">${(locs.find(l=>l.id===loc)?.drawers||[]).map(d=>`<option value="${esc(d)}"${d===drawer?' selected':''}>${esc(d)}</option>`).join('')}</select></div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>N.°</label><input id="f-num" type="number" value="${maxNum+1}"></div>
+        <div class="fg"><label>Cantidad</label><input id="f-qty" value="1"></div>
+      </div>
+      <div class="fg"><label>Material / Elemento</label><input id="f-name" placeholder="Ej: Dinamómetro de resorte"></div>
+      <div class="fg"><label>Marca</label><input id="f-brand" placeholder="Ej: ABC, Vernier"></div>
+      <div class="fg"><label>Estado</label><select id="f-st">${STATUSES.map(s=>`<option>${s}</option>`).join('')}</select></div>
+      <div class="fg"><label>Observaciones</label><textarea id="f-obs" rows="2" placeholder="Detalles..."></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveNewItem()">Guardar</button>
+    </div>`;
+  document.getElementById("modalBg").hidden = false;
+}
+
+function openEditModal(id) {
+  const item = items.find(i=>i.id===id);
+  if(!item) return;
+  const locs = getLocs();
+
+  document.getElementById("modalBox").innerHTML = `
+    <div class="modal-head"><h2>Editar</h2><button class="modal-x" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="fg-row">
+        <div class="fg"><label>Ubicación</label><select id="f-loc" onchange="onLocChange()">${locs.map(l=>`<option value="${esc(l.id)}"${l.id===item.location?' selected':''}>${esc(l.name)}</option>`).join('')}</select></div>
+        <div class="fg"><label>Cajón / Piso</label><select id="f-dr">${(locs.find(l=>l.id===item.location)?.drawers||[]).map(d=>`<option value="${esc(d)}"${d===item.drawer?' selected':''}>${esc(d)}</option>`).join('')}</select></div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>N.°</label><input id="f-num" type="number" value="${item.num}"></div>
+        <div class="fg"><label>Cantidad</label><input id="f-qty" value="${esc(String(item.quantity))}"></div>
+      </div>
+      <div class="fg"><label>Material / Elemento</label><input id="f-name" value="${esc(item.name)}"></div>
+      <div class="fg"><label>Marca</label><input id="f-brand" value="${esc(item.brand)}"></div>
+      <div class="fg"><label>Estado</label><select id="f-st">${STATUSES.map(s=>`<option${s===item.status?' selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="fg"><label>Observaciones</label><textarea id="f-obs" rows="2">${esc(item.observations)}</textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" onclick="deleteItem('${item.id}');closeModal()">Eliminar</button>
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-accent" onclick="updateItem('${item.id}')">Guardar</button>
+    </div>`;
+  document.getElementById("modalBg").hidden = false;
+}
+
+function onLocChange() {
+  const loc = document.getElementById("f-loc").value;
+  const locs = getLocs();
+  const sel = document.getElementById("f-dr");
+  sel.innerHTML = (locs.find(l=>l.id===loc)?.drawers||[]).map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');
+}
+
+function closeModal() { document.getElementById("modalBg").hidden = true; }
+document.getElementById("modalBg").addEventListener("click", function(e) { if(e.target===this) closeModal(); });
+
+function saveNewItem() {
+  const item = {
+    id: String(nextId++),
+    section: section,
+    location: document.getElementById("f-loc").value,
+    drawer: document.getElementById("f-dr").value,
+    num: parseInt(document.getElementById("f-num").value)||1,
+    name: document.getElementById("f-name").value.trim(),
+    brand: document.getElementById("f-brand").value.trim(),
+    quantity: document.getElementById("f-qty").value.trim(),
+    status: document.getElementById("f-st").value,
+    observations: document.getElementById("f-obs").value.trim(),
+  };
+  if(!item.name){ toast("Ingresa un nombre"); return; }
+  items.push(item);
+  saveData(); closeModal(); render(); toast("Agregado");
+}
+
+function updateItem(id) {
+  const item = items.find(i=>i.id===id);
+  if(!item) return;
+  item.location = document.getElementById("f-loc").value;
+  item.drawer = document.getElementById("f-dr").value;
+  item.num = parseInt(document.getElementById("f-num").value)||1;
+  item.name = document.getElementById("f-name").value.trim();
+  item.brand = document.getElementById("f-brand").value.trim();
+  item.quantity = document.getElementById("f-qty").value.trim();
+  item.status = document.getElementById("f-st").value;
+  item.observations = document.getElementById("f-obs").value.trim();
+  saveData(); closeModal(); render(); toast("Actualizado");
+}
+
+function showConfirm(msg, onYes) {
+  const box = document.getElementById("modalBox");
+  box.innerHTML = `
+    <div class="modal-head"><h2>Confirmar</h2><button class="modal-x" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body"><p style="margin:8px 0">${msg}</p></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-danger" id="confirmYesBtn">Aceptar</button>
+    </div>`;
+  document.getElementById("modalBg").hidden = false;
+  document.getElementById("confirmYesBtn").onclick = function() { closeModal(); onYes(); };
+}
+
+function deleteItem(id) {
+  showConfirm("¿Eliminar este elemento?", function() {
+    items = items.filter(i=>i.id!==id);
+    saveData(); render(); toast("Eliminado");
+  });
+}
+
+// ═══════════════════════════════════════
+//  EXPORT CSV
+// ═══════════════════════════════════════
+function exportCSV() {
+  const si = sectionItems();
+  const bom = "﻿";
+  let csv = bom + "Ubicación,Código Inventario,Cajón,N.°,Material,Marca,Cantidad,Estado,Observaciones\n";
+  si.forEach(i => {
+    csv += [`"${i.location}"`,`"${locCodes[i.location]||""}"`,`"${i.drawer}"`,i.num,`"${i.name}"`,`"${i.brand}"`,i.quantity,i.status,`"${i.observations}"`].join(",") + "\n";
+  });
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `inventario-${section}-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast("CSV exportado");
+}
+
+// ═══════════════════════════════════════
+//  DATA MANAGEMENT
+// ═══════════════════════════════════════
+function resetData() {
+  showConfirm("¿Restaurar todos los datos a los valores originales? Se perderán los cambios.", function() {
+    try { localStorage.removeItem("inv_items"); localStorage.removeItem("inv_nextId"); localStorage.removeItem("inv_locCodes"); localStorage.removeItem("inv_auth"); localStorage.removeItem("inv_customMatLocs"); localStorage.removeItem("inv_customEqLocs"); } catch(e) {}
+    locCodes = {};
+    customMaterialesLocs = [];
+    customEquiposLocs = [];
+    nextId = 1;
+    loadDefaultMateriales();
+    loadDefaultEquipos();
+    saveData();
+    render();
+    toast("Datos restaurados");
+  });
+}
+
+// ═══════════════════════════════════════
+//  MOBILE
+// ═══════════════════════════════════════
+function toggleMobile() {
+  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("mobileOverlay").hidden = !document.getElementById("sidebar").classList.contains("open");
+}
+function closeMobile() {
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("mobileOverlay").hidden = true;
+}
+
+// ═══════════════════════════════════════
+//  CÓDIGOS DE INVENTARIO
+// ═══════════════════════════════════════
+function editLocCode(locId) {
+  const current = locCodes[locId] || "";
+  const val = prompt("Código de inventario universitario para " + locId + ":", current);
+  if (val !== null) {
+    if (val.trim()) {
+      locCodes[locId] = val.trim();
+    } else {
+      delete locCodes[locId];
+    }
+    saveData();
+    render();
+    toast(val.trim() ? "Código asignado" : "Código eliminado");
+  }
+}
+
+// ═══════════════════════════════════════
+//  LOCATION MANAGEMENT
+// ═══════════════════════════════════════
+const LOC_ICONS = ["🗄","🗃","📦","📋","🏷","🧰","🗂","📐","🔬","💡","🖥","📺","🪑","📁","🔧"];
+
+function openLocModal(editId) {
+  const isEdit = !!editId;
+  let loc = null;
+  if (isEdit) {
+    loc = getLocs().find(l=>l.id===editId);
+    if (!loc || !isCustomLoc(editId)) return;
+  }
+
+  const currentIcon = loc ? loc.icon : "📦";
+  const currentName = loc ? loc.name : "";
+  const currentDrawers = loc ? [...loc.drawers] : ["Sección 1"];
+
+  let html = `
+    <div class="modal-head"><h2>${isEdit?'Editar':'Nueva'} ubicación</h2><button class="modal-x" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="fg"><label>Nombre</label><input id="loc-name" value="${esc(currentName)}" placeholder="Ej: Armario Nuevo, Estante TVs"></div>
+      <div class="fg"><label>Icono</label>
+        <div class="icon-picker" id="iconPicker">
+          ${LOC_ICONS.map(ic=>`<span class="icon-opt${ic===currentIcon?' selected':''}" data-icon="${ic}" onclick="pickLocIcon(this)">${ic}</span>`).join('')}
+        </div>
+        <input type="hidden" id="loc-icon" value="${currentIcon}">
+      </div>
+      <div class="fg"><label>Sección</label>
+        <select id="loc-section" ${isEdit?'disabled':''}>
+          <option value="materiales"${section==='materiales'?' selected':''}>Materiales</option>
+          <option value="equipos"${section==='equipos'?' selected':''}>Equipos</option>
+        </select>
+      </div>
+      <div class="fg"><label>Cajones / Pisos / Secciones</label>
+        <div class="drawer-list-editor" id="drawerList">
+          ${currentDrawers.map((d,i)=>`<div class="drawer-row"><input value="${esc(d)}" placeholder="Nombre de sección"><button onclick="removeDrawerRow(this)" title="Quitar">&times;</button></div>`).join('')}
+        </div>
+        <button class="add-drawer-btn" onclick="addDrawerRow()">+ Agregar sección</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveLoc(${isEdit?"'"+esc(editId)+"'":"null"})">${isEdit?'Guardar cambios':'Crear ubicación'}</button>
+    </div>`;
+
+  document.getElementById("modalBox").innerHTML = html;
+  document.getElementById("modalBg").hidden = false;
+}
+
+function pickLocIcon(el) {
+  document.querySelectorAll('#iconPicker .icon-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('loc-icon').value = el.dataset.icon;
+}
+
+function addDrawerRow() {
+  const list = document.getElementById('drawerList');
+  const count = list.children.length + 1;
+  const row = document.createElement('div');
+  row.className = 'drawer-row';
+  row.innerHTML = `<input value="Sección ${count}" placeholder="Nombre de sección"><button onclick="removeDrawerRow(this)" title="Quitar">&times;</button>`;
+  list.appendChild(row);
+}
+
+function removeDrawerRow(btn) {
+  const list = document.getElementById('drawerList');
+  if (list.children.length <= 1) { toast("Mínimo 1 sección"); return; }
+  btn.closest('.drawer-row').remove();
+}
+
+function saveLoc(editId) {
+  const name = document.getElementById('loc-name').value.trim();
+  if (!name) { toast("Ingresa un nombre"); return; }
+  const icon = document.getElementById('loc-icon').value;
+  const sec = document.getElementById('loc-section').value;
+  const drawerEls = document.querySelectorAll('#drawerList input');
+  const drawers = [];
+  drawerEls.forEach(el => {
+    const v = el.value.trim();
+    if (v) drawers.push(v);
+  });
+  if (drawers.length === 0) { toast("Agrega al menos 1 sección"); return; }
+
+  const targetArr = sec === "equipos" ? customEquiposLocs : customMaterialesLocs;
+
+  if (editId) {
+    // Edit existing
+    const idx = targetArr.findIndex(l=>l.id===editId);
+    if (idx === -1) return;
+    const oldName = targetArr[idx].id;
+    targetArr[idx].name = name;
+    targetArr[idx].icon = icon;
+    // Update drawers — keep existing drawer names that items reference
+    const oldDrawers = targetArr[idx].drawers;
+    targetArr[idx].drawers = drawers;
+    // If id (name) changed, update items
+    if (oldName !== name) {
+      targetArr[idx].id = name;
+      items.forEach(i => { if (i.location === oldName) i.location = name; });
+    }
+    // If drawer names changed, update items
+    oldDrawers.forEach((od, di) => {
+      if (drawers[di] && drawers[di] !== od) {
+        items.forEach(i => { if (i.location === name && i.drawer === od) i.drawer = drawers[di]; });
+      }
+    });
+  } else {
+    // Check unique name
+    const allLocs = getLocs();
+    if (allLocs.some(l=>l.id===name)) { toast("Ya existe una ubicación con ese nombre"); return; }
+    targetArr.push({ id: name, name: name, icon: icon, drawers: drawers });
+  }
+
+  saveData();
+  closeModal();
+  render();
+  toast(editId ? "Ubicación actualizada" : "Ubicación creada");
+}
+
+function deleteLoc(locId) {
+  if (!isCustomLoc(locId)) return;
+  const locItems = items.filter(i => i.location === locId);
+  const msg = locItems.length > 0
+    ? `"${locId}" tiene ${locItems.length} ítem(s). ¿Eliminar la ubicación y todos sus ítems?`
+    : `¿Eliminar la ubicación "${locId}"?`;
+  showConfirm(msg, function() {
+    // Remove items in this location
+    items = items.filter(i => i.location !== locId);
+    // Remove from custom arrays
+    customMaterialesLocs = customMaterialesLocs.filter(l=>l.id!==locId);
+    customEquiposLocs = customEquiposLocs.filter(l=>l.id!==locId);
+    // Clean up locCodes
+    delete locCodes[locId];
+    // If currently viewing this location, go to dashboard
+    if (currentLoc === locId) { currentLoc = null; currentDrawer = null; viewMode = "dashboard"; }
+    saveData();
+    render();
+    toast("Ubicación eliminada");
+  });
+}
+
+// ═══════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════
+function esc(s) {
+  if(!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 2000);
+}
+
+
+// ═══════════════════════════════════════
+//  AUTHENTICATION
+// ═══════════════════════════════════════
+const AUTH_HASH = "a3f2b8c9d4e5"; // Simple hash for "labfisica2024"
+function simpleHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    h = ((h << 5) - h) + c;
+    h |= 0;
+  }
+  return Math.abs(h).toString(16).slice(0, 12);
+}
+
+// Pre-compute: store the actual hash of the password
+const PASS_HASH = "labfisica2024";
+
+function doLogin() {
+  const input = document.getElementById("loginPass").value;
+  if (input === PASS_HASH) {
+    try { localStorage.setItem("inv_auth", "1"); } catch(e) {}
+    document.getElementById("loginOverlay").hidden = true;
+    document.getElementById("appMain").hidden = false;
+    document.getElementById("loginError").textContent = "";
+  } else {
+    document.getElementById("loginError").textContent = "Contraseña incorrecta";
+    document.getElementById("loginPass").value = "";
+    document.getElementById("loginPass").focus();
+  }
+}
+
+function doLogout() {
+  try { localStorage.removeItem("inv_auth"); } catch(e) {}
+  document.getElementById("loginOverlay").hidden = false;
+  document.getElementById("appMain").hidden = true;
+  document.getElementById("loginPass").value = "";
+  document.getElementById("loginError").textContent = "";
+}
+
+function checkAuth() {
+  try {
+    if (localStorage.getItem("inv_auth") === "1") {
+      document.getElementById("loginOverlay").hidden = true;
+      document.getElementById("appMain").hidden = false;
+      return;
+    }
+  } catch(e) {}
+  document.getElementById("loginOverlay").hidden = false;
+  document.getElementById("appMain").hidden = true;
+  document.getElementById("loginPass").focus();
+}
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+checkAuth();
+loadData();
+render();
+</script>
+</body></html>
