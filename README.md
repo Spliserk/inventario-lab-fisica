@@ -45,8 +45,8 @@ La contraseña por defecto es: `labfisica2024`
 
 ## Autor
 
-**Eric Santiago Hernández Rojas**  
-Instructor — UNISANGIL  
+**KILMERT ADRIAN GUZMAN MONTAÑEZ**  
+ESTUDIANTE — UNISANGIL  
 Trabajo de Grado
 
 ## Licencia
