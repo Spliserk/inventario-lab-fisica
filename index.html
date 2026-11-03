@@ -2,10 +2,19 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>App Inventory — UNISANGIL</title>
 <meta name="description" content="App Inventory — Sistema de inventario de laboratorios · UNISANGIL / ABC Laboratorios S.A.S.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔬</text></svg>">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<!-- PWA -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1A73E8">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="App Inventory">
 <script>
 try {
   const savedTheme = localStorage.getItem("inv_theme");
@@ -5636,6 +5645,13 @@ showLoginScreen();
 initConnectionMonitor();
 // onAuthStateChanged es la puerta única: restaura sesión, login y logout.
 initAuthListener();
+
+// Registrar el Service Worker (PWA: instalable + offline). Solo en https.
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch((err) => console.warn("SW no registrado:", err));
+  });
+}
 // Update print date on beforeprint
 window.addEventListener("beforeprint", function() {
   const dateEl = document.getElementById("printDate");

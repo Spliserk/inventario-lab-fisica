@@ -1,0 +1,22 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4A90E2"/>
+      <stop offset="1" stop-color="#1A73E8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="115" fill="url(#bg)"/>
+  <!-- Matraz Erlenmeyer -->
+  <g fill="none" stroke="#ffffff" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+    <!-- borde superior del cuello -->
+    <line x1="206" y1="132" x2="306" y2="132"/>
+    <!-- silueta del matraz -->
+    <path d="M226 136 V214 L150 356 a72 72 0 0 0 64 104 h84 a72 72 0 0 0 64 -104 L286 214 V136"/>
+  </g>
+  <!-- líquido -->
+  <path d="M188 300 q68 34 136 0 l28 52 a72 72 0 0 1 -58 108 h-76 a72 72 0 0 1 -58 -108 z" fill="#ffffff" opacity="0.92"/>
+  <!-- burbujas -->
+  <circle cx="226" cy="400" r="12" fill="#1A73E8" opacity="0.5"/>
+  <circle cx="276" cy="420" r="9" fill="#1A73E8" opacity="0.5"/>
+  <circle cx="250" cy="372" r="7" fill="#1A73E8" opacity="0.5"/>
+</svg>
