@@ -2,7 +2,7 @@
 
 Sistema web de gestión de inventario para laboratorios de la Universidad de San Gil (UNISANGIL), Sede Yopal. Aplicación de página única (SPA) construida con ~5.600 líneas de HTML/CSS/JavaScript vanilla y Firebase Firestore como backend en la nube.
 
-> Desarrollado como parte de la Práctica de Desempeño Profesional (Trabajo de Grado) en colaboración con ABC Laboratorios S.A.S.
+> Desarrollado como parte de Trabajo de Grado
 
 ---
 
