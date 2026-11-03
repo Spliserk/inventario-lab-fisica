@@ -31,6 +31,11 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const PRINT_LINKS = process.argv.includes("--links");
+// --skip=user1,user2 : omite esos nombres de usuario de la migración.
+const SKIP = new Set(
+  (process.argv.find(a => a.startsWith("--skip=")) || "")
+    .replace("--skip=", "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean)
+);
 
 const KEY_PATH = new URL("./serviceAccountKey.json", import.meta.url);
 let serviceAccount;
@@ -42,9 +47,9 @@ try {
   process.exit(1);
 }
 
-initializeApp({ cert: cert(serviceAccount) });
-const auth = getAuth();
-const db = getFirestore();
+const app = initializeApp({ credential: cert(serviceAccount), projectId: serviceAccount.project_id });
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 function randomPassword() {
   return "Temp-" + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2).toUpperCase() + "!9";
@@ -87,6 +92,7 @@ async function main() {
     if (!data.password && doc.id.length > 20) { report.yaMigrados++; continue; }
 
     if (!username) { report.errores.push(`${doc.id}: sin username`); continue; }
+    if (SKIP.has(username)) { console.log(`⏭  @${username} omitido (--skip)`); report.omitidos = (report.omitidos || 0) + 1; continue; }
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       report.sinEmail.push(`@${username} (doc ${doc.id})`);
       continue;
