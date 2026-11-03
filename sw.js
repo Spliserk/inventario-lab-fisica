@@ -4,11 +4,25 @@
 //  Los datos de Firestore NO se cachean aquí: Firestore ya tiene su propia
 //  persistencia offline. Sube la versión del CACHE para forzar actualización.
 // ═══════════════════════════════════════════════════════════════════
-const CACHE = "appinv-v1";
+const CACHE = "appinv-v2";
 const SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
+  "./css/styles.css",
+  "./js/01-config.js",
+  "./js/02-storage.js",
+  "./js/03-auth.js",
+  "./js/04-ui-state.js",
+  "./js/05-seed-data.js",
+  "./js/06-rendering.js",
+  "./js/07-labs.js",
+  "./js/08-navigation.js",
+  "./js/09-inventory-tools.js",
+  "./js/10-login-users.js",
+  "./js/11-loans.js",
+  "./js/12-backup-print.js",
+  "./js/13-init.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png"

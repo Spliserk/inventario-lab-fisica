@@ -1,6 +1,6 @@
 # 🧪 App Inventory — UNISANGIL
 
-**App Inventory** es un sistema web de gestión de inventario para laboratorios de la Universidad de San Gil (UNISANGIL), Sede Yopal. Aplicación de página única (SPA) construida con ~5.600 líneas de HTML/CSS/JavaScript vanilla y Firebase Firestore como backend en la nube.
+**App Inventory** es un sistema web de gestión de inventario para laboratorios de la Universidad de San Gil (UNISANGIL), Sede Yopal. Aplicación de página única (SPA) en HTML/CSS/JavaScript vanilla (organizada en `css/` y módulos `js/` por área) con Firebase Auth y Firestore como backend en la nube.
 
 > Desarrollado como parte de Trabajo de Grado
 
@@ -75,7 +75,7 @@ Ubicación, Código Inventario, Cajón, N.°, Material, Marca, N.° Placa, Seria
 
 | Tecnología | Uso |
 |------------|-----|
-| HTML/CSS/JavaScript | Frontend completo en un solo archivo |
+| HTML/CSS/JavaScript | Frontend vanilla organizado en css/ y js/ por área |
 | Firebase Firestore | Base de datos en la nube en tiempo real |
 | Firebase Auth | Autenticación de usuarios (email/contraseña) |
 | EmailJS | Envío de correos electrónicos desde el cliente |
@@ -109,14 +109,37 @@ Copia `index.html` a cualquier servidor web estático (Apache, Nginx, Vercel, Ne
 
 ```
 inventario-lab-fisica/
-├── index.html         # Aplicación completa (SPA de archivo único)
-├── firestore.rules    # Reglas de seguridad de Firestore (validación de roles en servidor)
-├── scripts/
-│   └── migrate-to-auth.mjs   # Script de migración a Firebase Auth
+├── index.html            # Estructura HTML (carga css/ y js/)
+├── css/
+│   └── styles.css        # Todos los estilos
+├── js/                   # Lógica por área (scripts clásicos, en orden)
+│   ├── 01-config.js      # Datos, estado, roles, config de EmailJS/Firebase
+│   ├── 02-storage.js     # Persistencia (localStorage + Firestore)
+│   ├── 03-auth.js        # Autenticación (Firebase Auth) y auditoría
+│   ├── 04-ui-state.js    # Indicador de sync y selección masiva
+│   ├── 05-seed-data.js   # Datos semilla de materiales/equipos
+│   ├── 06-rendering.js   # Renderizado de vistas
+│   ├── 07-labs.js        # Gestión de laboratorios
+│   ├── 08-navigation.js  # Navegación, edición en línea, modales
+│   ├── 09-inventory-tools.js  # Export CSV, móvil, códigos, ubicaciones
+│   ├── 10-login-users.js # Login y gestión de usuarios
+│   ├── 11-loans.js       # Préstamos y notificaciones
+│   ├── 12-backup-print.js# Backup, impresión, bitácora
+│   └── 13-init.js        # Arranque (service worker + auth listener)
+├── icons/                # Iconos de la PWA
+├── manifest.webmanifest  # Manifiesto PWA (instalable)
+├── sw.js                 # Service worker (offline)
+├── firestore.rules       # Reglas de seguridad de Firestore
+├── scripts/              # Herramientas: migración a Auth, generador de iconos
 ├── docs/
-│   └── SEGURIDAD.md   # Guía de seguridad, despliegue y migración
-└── README.md          # Este archivo
+│   └── SEGURIDAD.md      # Guía de seguridad, despliegue y migración
+└── README.md             # Este archivo
 ```
+
+> **Nota sobre la arquitectura:** los archivos de `js/` son *scripts clásicos* (no módulos ES),
+> cargados en orden en `index.html`. Comparten un único scope global, por lo que las funciones
+> siguen siendo accesibles desde los `onclick` del HTML. El orden de carga importa: `01` define
+> la config y `13` arranca la app al final.
 
 ---
 
