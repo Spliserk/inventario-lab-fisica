@@ -1,6 +1,6 @@
-# 🧪 Inventario Lab Física — UNISANGIL
+# 🧪 App Inventory — UNISANGIL
 
-Sistema web de gestión de inventario para laboratorios de la Universidad de San Gil (UNISANGIL), Sede Yopal. Aplicación de página única (SPA) construida con ~5.600 líneas de HTML/CSS/JavaScript vanilla y Firebase Firestore como backend en la nube.
+**App Inventory** es un sistema web de gestión de inventario para laboratorios de la Universidad de San Gil (UNISANGIL), Sede Yopal. Aplicación de página única (SPA) construida con ~5.600 líneas de HTML/CSS/JavaScript vanilla y Firebase Firestore como backend en la nube.
 
 > Desarrollado como parte de Trabajo de Grado
 
@@ -64,7 +64,7 @@ Ubicación, Código Inventario, Cajón, N.°, Material, Marca, N.° Placa, Seria
 - Bitácora de auditoría con registro de todas las acciones
 - Modo oscuro automático (sigue la preferencia del sistema) con toggle manual
 - Diseño responsive (móvil, tablet, escritorio)
-- Protección por contraseña
+- Autenticación con **Firebase Auth** y roles validados en el servidor mediante reglas de Firestore
 - Sincronización en la nube con Firebase Firestore
 - Modo offline con localStorage que sincroniza al reconectar
 - Material Design 3 con Google Material Symbols
@@ -109,9 +109,26 @@ Copia `index.html` a cualquier servidor web estático (Apache, Nginx, Vercel, Ne
 
 ```
 inventario-lab-fisica/
-├── index.html    # Aplicación completa (SPA de archivo único)
-└── README.md     # Este archivo
+├── index.html         # Aplicación completa (SPA de archivo único)
+├── firestore.rules    # Reglas de seguridad de Firestore (validación de roles en servidor)
+├── scripts/
+│   └── migrate-to-auth.mjs   # Script de migración a Firebase Auth
+├── docs/
+│   └── SEGURIDAD.md   # Guía de seguridad, despliegue y migración
+└── README.md          # Este archivo
 ```
+
+---
+
+## Seguridad
+
+La autenticación usa **Firebase Auth** (email + contraseña) y los roles se validan en el
+servidor con las reglas de `firestore.rules` — no se pueden saltar desde el cliente. El login
+se hace por nombre de usuario (resuelto a email mediante el mapa `usernames`).
+
+> ⚠️ **Antes de usar en producción** hay que publicar las reglas de Firestore y crear el primer
+> superadmin. Todo el procedimiento (despliegue paso a paso y migración de usuarios existentes
+> sin perder datos) está en **[`docs/SEGURIDAD.md`](docs/SEGURIDAD.md)**.
 
 ---
 

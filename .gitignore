@@ -1,0 +1,15 @@
+# Credenciales — NUNCA subir al repositorio
+scripts/serviceAccountKey.json
+*.serviceaccount.json
+.env
+.env.*
+
+# Dependencias
+node_modules/
+scripts/node_modules/
+scripts/package-lock.json
+scripts/package.json
+
+# Sistema
+.DS_Store
+Thumbs.db

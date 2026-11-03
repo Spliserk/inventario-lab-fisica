@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inventario de Laboratorios — UNISANGIL</title>
-<meta name="description" content="Sistema de inventario de Laboratorios - UNISANGIL / ABC Laboratorios S.A.S.">
+<title>App Inventory — UNISANGIL</title>
+<meta name="description" content="App Inventory — Sistema de inventario de laboratorios · UNISANGIL / ABC Laboratorios S.A.S.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔬</text></svg>">
 <script>
 try {
@@ -1428,7 +1428,7 @@ tr:hover .row-actions { opacity: 1; }
 <div class="login-overlay" id="loginOverlay">
   <div class="login-box">
     <div class="login-icon">🔬</div>
-    <h2>Inventario de Laboratorios</h2>
+    <h2>App Inventory</h2>
     <p class="login-sub">UNISANGIL — ABC Laboratorios S.A.S.</p>
     <div class="login-fields">
       <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
@@ -1437,6 +1437,7 @@ tr:hover .row-actions { opacity: 1; }
     <button class="login-btn" id="loginBtn" onclick="doLogin()">Iniciar sesión</button>
     <div class="login-error" id="loginError"></div>
     <p class="login-hint" id="loginHint">Ingrese sus credenciales para acceder</p>
+    <p class="login-register-link"><a onclick="doForgotPassword()">¿Olvidó su contraseña?</a></p>
     <p class="login-register-link">¿No tienes cuenta? <a onclick="showRegister()">Crear cuenta</a></p>
   </div>
 </div>
@@ -1450,7 +1451,7 @@ tr:hover .row-actions { opacity: 1; }
       <input type="text" id="regName" placeholder="Nombre completo" autocomplete="name">
       <input type="text" id="regUser" placeholder="Nombre de usuario" autocomplete="username" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9._-]/g,'')">
       <input type="email" id="regEmail" placeholder="Correo electrónico" autocomplete="email">
-      <input type="password" id="regPass" placeholder="Contraseña (mín. 4 caracteres)" autocomplete="new-password">
+      <input type="password" id="regPass" placeholder="Contraseña (mín. 6 caracteres)" autocomplete="new-password">
       <input type="password" id="regPass2" placeholder="Confirmar contraseña" autocomplete="new-password">
     </div>
     <button class="login-btn" id="regBtn" onclick="doRegister()">Crear cuenta</button>
@@ -1462,7 +1463,7 @@ tr:hover .row-actions { opacity: 1; }
 <div class="app" id="appMain" hidden>
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <h1 id="sidebarTitle">Inventario de Laboratorios</h1>
+      <h1 id="sidebarTitle">App Inventory</h1>
       <p>UNISANGIL — ABC Laboratorios S.A.S.</p>
       <div id="labSelector"></div>
     </div>
@@ -1505,6 +1506,7 @@ tr:hover .row-actions { opacity: 1; }
 <!-- Firebase SDK (compat mode for vanilla JS) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
 <script>
@@ -1587,7 +1589,9 @@ function saveCollapsedNavLocs() {
 //  USER ROLES
 // ═══════════════════════════════════════
 let userRole = null;     // "superadmin" | "laboratorista" | "usuario"
-let userName = null;     // nombre del usuario logueado
+let userName = null;     // nombre para mostrar del usuario logueado
+let currentUid = null;   // uid de Firebase Auth del usuario logueado
+let currentUsername = null; // nombre de usuario (login) del usuario logueado
 let userEmail = null;    // correo del usuario logueado
 let userLabId = null;    // lab asignado al laboratorista/usuario
 let userLabName = null;  // nombre del lab asignado
@@ -1630,6 +1634,7 @@ const firebaseConfig = {
 };
 
 let db = null;
+let auth = null;
 let firestoreReady = false;
 let firestoreUnsubscribe = null;
 let savingToFirestore = false;
@@ -1638,6 +1643,7 @@ let ignoreNextSnapshot = false;
 try {
   firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
+  auth = firebase.auth();
   firestoreReady = true;
   // Enable offline persistence for Firestore
   db.enablePersistence({ synchronizeTabs: true }).catch(err => {
@@ -2141,41 +2147,96 @@ function setupRealtimeSync() {
 // ═══════════════════════════════════════
 //  SECURITY: Password Hashing
 // ═══════════════════════════════════════
-async function hashPassword(pass) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(pass + "_inventario_salt_2024");
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+// ═══════════════════════════════════════
+//  AUTH HELPERS (Firebase Auth)
+// ───────────────────────────────────────
+//  La autenticación la maneja Firebase Auth (email + contraseña).
+//  El login es por "nombre de usuario": se resuelve a su email con el
+//  mapa /usernames/{usuario} y luego se autentica contra Firebase Auth.
+//  Los roles viven en /usuarios/{uid} y se validan en las reglas de
+//  Firestore (firestore.rules), no en el cliente.
+// ═══════════════════════════════════════
+
+// Dominio sintético para cuentas SIN correo real (p. ej. el superadmin).
+// Firebase Auth exige un email como identificador, pero como el login es por
+// nombre de usuario, usamos un email interno que el usuario nunca ve ni usa.
+// (.local es un dominio reservado: nunca será una bandeja real.)
+const AUTH_EMAIL_DOMAIN = "appinventory.local";
+
+// Devuelve el email de Firebase Auth a usar: el correo real si se indicó uno
+// válido; si no, uno sintético derivado del nombre de usuario.
+function authEmailFor(username, contactEmail) {
+  const e = (contactEmail || "").trim().toLowerCase();
+  if (e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return e;
+  return username + "@" + AUTH_EMAIL_DOMAIN;
 }
 
-function generateAuthToken(role, username) {
-  const payload = JSON.stringify({ role, username, ts: Date.now(), r: Math.random().toString(36).slice(2) });
-  return btoa(payload);
-}
-
-function parseAuthToken(token) {
+// Resuelve el email de Firebase Auth a partir del nombre de usuario.
+async function usernameToEmail(username) {
+  if (!firestoreReady || !db) return null;
   try {
-    const decoded = JSON.parse(atob(token));
-    if (Date.now() - decoded.ts > 7 * 24 * 60 * 60 * 1000) return null;
-    return decoded;
+    const doc = await db.collection("usernames").doc(username).get();
+    return doc.exists ? (doc.data().email || null) : null;
   } catch(e) { return null; }
 }
 
-async function migratePasswords() {
-  if (!firestoreReady || !db) return;
-  try {
-    // Legacy editor config migration (no longer used, but don't break)
-    const usersSnap = await db.collection("usuarios").get();
-    for (const doc of usersSnap.docs) {
-      const data = doc.data();
-      if (data.password && data.password.length !== 64) {
-        const hashed = await hashPassword(data.password);
-        await db.collection("usuarios").doc(doc.id).update({ password: hashed });
-        // Password migrated
-      }
+// Aplica un perfil de /usuarios y abre la app. Compartido por login y por
+// la restauración de sesión (onAuthStateChanged).
+async function enterApp(uid, data) {
+  currentUid = uid;
+  currentUsername = data.username || null;
+  userRole = data.role || "usuario";
+  userName = data.displayName || data.username || "Usuario";
+  userEmail = data.email || null;
+  userLabId = data.labId || null;
+  userLabName = null;
+
+  await loadLaboratorios();
+  if (userRole === "superadmin" || userRole === "usuario") {
+    currentLabId = laboratorios.length > 0 ? laboratorios[0].id : "lab_fisica";
+  } else {
+    // Laboratorista — solo su lab asignado
+    currentLabId = userLabId;
+    if (userLabId) {
+      const labObj = laboratorios.find(l => l.id === userLabId);
+      userLabName = labObj ? labObj.name : userLabId;
     }
-  } catch(e) { console.warn("Password migration error:", e); }
+  }
+
+  document.getElementById("loginOverlay").hidden = true;
+  document.getElementById("registerOverlay").hidden = true;
+  document.getElementById("appMain").hidden = false;
+  const loginErr = document.getElementById("loginError");
+  if (loginErr) loginErr.textContent = "";
+  loadSolicitudes();
+  if (userRole === "superadmin") {
+    viewMode = "admin-home";
+    render();
+  } else {
+    viewMode = "dashboard";
+    loadData();
+    render();
+  }
+  updateTitleBadge();
+}
+
+// Traduce códigos de error de Firebase Auth a mensajes en español.
+function authErrorMessage(e) {
+  const code = (e && e.code) || "";
+  const map = {
+    "auth/invalid-email": "Correo electrónico no válido",
+    "auth/user-disabled": "Esta cuenta está deshabilitada",
+    "auth/user-not-found": "Usuario o contraseña incorrectos",
+    "auth/wrong-password": "Usuario o contraseña incorrectos",
+    "auth/invalid-credential": "Usuario o contraseña incorrectos",
+    "auth/invalid-login-credentials": "Usuario o contraseña incorrectos",
+    "auth/too-many-requests": "Demasiados intentos. Espere un momento e intente de nuevo",
+    "auth/email-already-in-use": "Ya existe una cuenta con ese correo",
+    "auth/weak-password": "La contraseña es demasiado débil (mínimo 6 caracteres)",
+    "auth/network-request-failed": "Error de conexión. Revise su internet",
+    "auth/requires-recent-login": "Por seguridad, vuelva a iniciar sesión e intente de nuevo"
+  };
+  return map[code] || "Error de autenticación. Intente de nuevo";
 }
 
 // ═══════════════════════════════════════
@@ -3325,11 +3386,11 @@ function updateRoleUI() {
   if (titleEl) {
     if (userRole === "superadmin") {
       const lab = laboratorios.find(l => l.id === currentLabId);
-      titleEl.textContent = lab ? lab.name : "Inventario de Laboratorios";
+      titleEl.textContent = lab ? lab.name : "App Inventory";
     } else if (userLabName) {
       titleEl.textContent = userLabName;
     } else {
-      titleEl.textContent = "Inventario de Laboratorios";
+      titleEl.textContent = "App Inventory";
     }
   }
 
@@ -4387,29 +4448,9 @@ function toast(msg) {
 // ═══════════════════════════════════════
 //  AUTHENTICATION (unified login)
 // ═══════════════════════════════════════
-const DEFAULT_SUPERADMIN_USER = "admin";
-const DEFAULT_SUPERADMIN_PASS = "admin123";
-
-// Ensure superadmin account exists in Firestore
-async function ensureSuperadmin() {
-  if (!firestoreReady || !db) return;
-  try {
-    const snap = await db.collection("usuarios").where("role","==","superadmin").get();
-    if (snap.empty) {
-      const hashedPass = await hashPassword(DEFAULT_SUPERADMIN_PASS);
-      await db.collection("usuarios").add({
-        username: DEFAULT_SUPERADMIN_USER,
-        displayName: "Administrador",
-        email: "",
-        password: hashedPass,
-        role: "superadmin",
-        labId: null,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      // Superadmin account ensured
-    }
-  } catch(e) { console.warn("Could not ensure superadmin:", e); }
-}
+// El primer superadmin se crea UNA sola vez, de forma manual y segura, desde
+// la consola de Firebase (ver docs/SEGURIDAD.md). Ya NO existe un superadmin
+// por defecto con contraseña pública.
 
 // Ensure default lab exists
 async function ensureDefaultLab() {
@@ -4440,101 +4481,93 @@ async function loadLaboratorios() {
 async function doLogin() {
   const user = document.getElementById("loginUser").value.trim().toLowerCase();
   const pass = document.getElementById("loginPass").value;
+  const errEl = document.getElementById("loginError");
   if (!user || !pass) {
-    document.getElementById("loginError").textContent = "Ingrese usuario y contraseña";
+    errEl.textContent = "Ingrese usuario y contraseña";
     return;
   }
-  if (!firestoreReady) {
-    document.getElementById("loginError").textContent = "Sin conexión al servidor";
+  if (!firestoreReady || !auth) {
+    errEl.textContent = "Sin conexión al servidor";
     return;
   }
-  document.getElementById("loginBtn").disabled = true;
-  document.getElementById("loginBtn").textContent = "Verificando...";
+  const btn = document.getElementById("loginBtn");
+  btn.disabled = true;
+  btn.textContent = "Verificando...";
+  errEl.textContent = "";
   try {
-    const snap = await db.collection("usuarios").where("username","==",user).get();
-    if (snap.empty) {
-      document.getElementById("loginError").textContent = "Usuario no encontrado";
+    // 1) Resolver el email de Firebase Auth a partir del nombre de usuario.
+    const email = await usernameToEmail(user);
+    if (!email) {
+      errEl.textContent = "Usuario o contraseña incorrectos";
       document.getElementById("loginUser").focus();
-    } else {
-      const doc = snap.docs[0];
-      const data = doc.data();
-      const passHash = await hashPassword(pass);
-      // Support both hashed and legacy plaintext passwords
-      if (data.password === passHash || data.password === pass) {
-        // If matched plaintext, migrate to hash now
-        if (data.password === pass && pass.length !== 64) {
-          try { await db.collection("usuarios").doc(doc.id).update({ password: passHash }); } catch(e) {}
-        }
-        userRole = data.role || "usuario";
-        userName = data.displayName || user;
-        userEmail = data.email || null;
-        userLabId = data.labId || null;
-
-        // Set the current lab based on role
-        await loadLaboratorios();
-        if (userRole === "superadmin") {
-          currentLabId = laboratorios.length > 0 ? laboratorios[0].id : "lab_fisica";
-          userLabName = null;
-        } else if (userRole === "usuario") {
-          // Usuarios can browse all labs — start with first one
-          currentLabId = laboratorios.length > 0 ? laboratorios[0].id : "lab_fisica";
-          userLabName = null;
-        } else {
-          // Laboratorista — only their assigned lab
-          currentLabId = userLabId;
-          if (userLabId) {
-            const labObj = laboratorios.find(l => l.id === userLabId);
-            userLabName = labObj ? labObj.name : userLabId;
-          }
-        }
-
-        try {
-          localStorage.setItem("inv_auth", generateAuthToken(userRole, user));
-          localStorage.setItem("inv_auth_user", user);
-        } catch(e) {}
-        document.getElementById("loginOverlay").hidden = true;
-        document.getElementById("appMain").hidden = false;
-        document.getElementById("loginError").textContent = "";
-        // Superadmin starts at lab list, others go to inventory
-        if (userRole === "superadmin") {
-          viewMode = "admin-home";
-          render();
-        } else {
-          viewMode = "dashboard";
-          loadData();
-          render();
-        }
-        loadSolicitudes();
-      } else {
-        document.getElementById("loginError").textContent = "Contraseña incorrecta";
-        document.getElementById("loginPass").value = "";
-        document.getElementById("loginPass").focus();
-      }
+      btn.disabled = false; btn.textContent = "Iniciar sesión";
+      return;
     }
+    // 2) Autenticar. onAuthStateChanged cargará el perfil y abrirá la app.
+    await auth.signInWithEmailAndPassword(email, pass);
+    // No reseteamos el botón aquí: onAuthStateChanged conmuta a la app.
   } catch(e) {
     console.error("Login error:", e);
-    document.getElementById("loginError").textContent = "Error de conexión";
+    errEl.textContent = authErrorMessage(e);
+    document.getElementById("loginPass").value = "";
+    document.getElementById("loginPass").focus();
+    btn.disabled = false;
+    btn.textContent = "Iniciar sesión";
   }
-  document.getElementById("loginBtn").disabled = false;
-  document.getElementById("loginBtn").textContent = "Iniciar sesión";
 }
 
-function doLogout() {
+// Enlace "¿Olvidó su contraseña?" en la pantalla de login.
+async function doForgotPassword() {
+  const user = (document.getElementById("loginUser").value || "").trim().toLowerCase();
+  const errEl = document.getElementById("loginError");
+  if (!user) {
+    errEl.innerHTML = '<span style="color:var(--amber)">Escriba su usuario y vuelva a pulsar "¿Olvidó su contraseña?"</span>';
+    document.getElementById("loginUser").focus();
+    return;
+  }
+  if (!firestoreReady || !auth) { errEl.textContent = "Sin conexión al servidor"; return; }
+  try {
+    const email = await usernameToEmail(user);
+    if (!email) {
+      // No revelamos si el usuario existe o no.
+      errEl.innerHTML = '<span style="color:var(--green)">Si el usuario existe, se enviará un correo para restablecer la contraseña.</span>';
+      return;
+    }
+    await auth.sendPasswordResetEmail(email);
+    errEl.innerHTML = '<span style="color:var(--green)">Correo de restablecimiento enviado. Revise su bandeja de entrada.</span>';
+  } catch(e) {
+    console.error("Reset error:", e);
+    errEl.innerHTML = '<span style="color:var(--green)">Si el usuario existe, se enviará un correo para restablecer la contraseña.</span>';
+  }
+}
+
+async function doLogout() {
+  if (firestoreUnsubscribe) { firestoreUnsubscribe(); firestoreUnsubscribe = null; }
+  try { if (auth) await auth.signOut(); } catch(e) { console.warn("Logout error:", e); }
+  // onAuthStateChanged limpia el estado y muestra el login.
+}
+
+// Limpia el estado de sesión y muestra la pantalla de login.
+function showLoginScreen() {
   userRole = null;
   userName = null;
+  currentUid = null;
+  currentUsername = null;
   userEmail = null;
   userLabId = null;
   userLabName = null;
   currentLabId = null;
   viewMode = "dashboard";
   if (firestoreUnsubscribe) { firestoreUnsubscribe(); firestoreUnsubscribe = null; }
+  // Limpieza de tokens heredados del esquema anterior.
   try { localStorage.removeItem("inv_auth"); localStorage.removeItem("inv_auth_user"); } catch(e) {}
   document.getElementById("loginOverlay").hidden = false;
   document.getElementById("registerOverlay").hidden = true;
   document.getElementById("appMain").hidden = true;
   document.getElementById("loginUser").value = "";
   document.getElementById("loginPass").value = "";
-  document.getElementById("loginError").textContent = "";
+  const errEl = document.getElementById("loginError");
+  if (errEl) errEl.textContent = "";
 }
 
 function showRegister() {
@@ -4555,10 +4588,14 @@ function showLogin() {
   document.getElementById("loginUser").focus();
 }
 
+// Evita que onAuthStateChanged reaccione durante operaciones que crean
+// cuentas (registro) antes de que exista el perfil en /usuarios.
+let suppressAuthHandler = false;
+
 async function doRegister() {
   const name = document.getElementById("regName").value.trim();
   const user = document.getElementById("regUser").value.trim().toLowerCase();
-  const email = document.getElementById("regEmail").value.trim();
+  const email = document.getElementById("regEmail").value.trim().toLowerCase();
   const pass = document.getElementById("regPass").value;
   const pass2 = document.getElementById("regPass2").value;
   const errEl = document.getElementById("regError");
@@ -4566,44 +4603,55 @@ async function doRegister() {
   if (!name) { errEl.textContent = "Ingrese su nombre completo"; return; }
   if (!user || user.length < 3) { errEl.textContent = "El usuario debe tener al menos 3 caracteres"; return; }
   if (!/^[a-z0-9._-]+$/.test(user)) { errEl.textContent = "El usuario solo puede tener letras, números, puntos, guiones"; return; }
-  if (!email || !email.includes("@")) { errEl.textContent = "Ingrese un correo válido"; return; }
-  if (pass.length < 4) { errEl.textContent = "La contraseña debe tener al menos 4 caracteres"; return; }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent = "Ingrese un correo válido"; return; }
+  if (pass.length < 6) { errEl.textContent = "La contraseña debe tener al menos 6 caracteres"; return; }
   if (pass !== pass2) { errEl.textContent = "Las contraseñas no coinciden"; return; }
 
-  if (!firestoreReady) { errEl.textContent = "Sin conexión al servidor"; return; }
+  if (!firestoreReady || !auth) { errEl.textContent = "Sin conexión al servidor"; return; }
 
   document.getElementById("regBtn").disabled = true;
   document.getElementById("regBtn").textContent = "Creando...";
 
   try {
-    // Check if username already exists
-    const existing = await db.collection("usuarios").where("username","==",user).get();
-    if (!existing.empty) {
+    // ¿Nombre de usuario ya tomado? (lookup directo en el mapa)
+    const taken = await db.collection("usernames").doc(user).get();
+    if (taken.exists) {
       errEl.textContent = "Ese nombre de usuario ya está en uso";
       document.getElementById("regBtn").disabled = false;
       document.getElementById("regBtn").textContent = "Crear cuenta";
       return;
     }
 
-    const hashedPass = await hashPassword(pass);
-    await db.collection("usuarios").add({
+    // Crear la cuenta en Firebase Auth. Esto inicia sesión automáticamente;
+    // suprimimos el handler mientras creamos el perfil y luego cerramos sesión.
+    suppressAuthHandler = true;
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    const uid = cred.user.uid;
+
+    // Perfil (rol "usuario", sin lab) y mapa username→email.
+    await db.collection("usuarios").doc(uid).set({
       username: user,
       displayName: name,
       email: email,
-      password: hashedPass,
       role: "usuario",
       labId: null,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+    await db.collection("usernames").doc(user).set({ email: email, uid: uid });
 
-    // Success — go back to login with pre-filled username
+    await auth.signOut();
+    suppressAuthHandler = false;
+
+    // Volver al login con el usuario precargado.
     showLogin();
     document.getElementById("loginUser").value = user;
+    document.getElementById("loginPass").value = "";
     document.getElementById("loginPass").focus();
     document.getElementById("loginError").innerHTML = '<span style="color:var(--green)">Cuenta creada. Inicie sesión.</span>';
   } catch(e) {
+    suppressAuthHandler = false;
     console.error("Register error:", e);
-    errEl.textContent = "Error al crear la cuenta. Intente de nuevo.";
+    errEl.textContent = authErrorMessage(e);
   }
   document.getElementById("regBtn").disabled = false;
   document.getElementById("regBtn").textContent = "Crear cuenta";
@@ -4614,7 +4662,7 @@ function openChangePasswordModal() {
     <div class="modal-head"><h2>Cambiar mi contraseña</h2><button class="modal-x" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
       <div class="fg"><label>Contraseña actual</label><input type="password" id="cp-current" placeholder="Contraseña actual" style="letter-spacing:2px"></div>
-      <div class="fg"><label>Nueva contraseña</label><input type="password" id="cp-new" placeholder="Mínimo 4 caracteres" style="letter-spacing:2px"></div>
+      <div class="fg"><label>Nueva contraseña</label><input type="password" id="cp-new" placeholder="Mínimo 6 caracteres" style="letter-spacing:2px"></div>
       <div class="fg"><label>Confirmar nueva contraseña</label><input type="password" id="cp-confirm" placeholder="Repetir nueva contraseña" style="letter-spacing:2px"></div>
       <div id="cp-error" style="color:var(--red);font-size:12px;min-height:18px;margin-top:4px"></div>
     </div>
@@ -4633,82 +4681,63 @@ async function saveMyPassword() {
   const errEl = document.getElementById("cp-error");
 
   if (!current || !newPass || !confirmPass) { errEl.textContent = "Complete todos los campos"; return; }
-  if (newPass.length < 4) { errEl.textContent = "La nueva contraseña debe tener al menos 4 caracteres"; return; }
+  if (newPass.length < 6) { errEl.textContent = "La nueva contraseña debe tener al menos 6 caracteres"; return; }
   if (newPass !== confirmPass) { errEl.textContent = "Las contraseñas no coinciden"; return; }
-  if (!firestoreReady || !db) { errEl.textContent = "Sin conexión al servidor"; return; }
+  if (!auth || !auth.currentUser) { errEl.textContent = "Sesión no válida. Vuelva a iniciar sesión."; return; }
 
   document.getElementById("cp-save-btn").disabled = true;
   document.getElementById("cp-save-btn").textContent = "Guardando...";
   try {
-    const savedUser = localStorage.getItem("inv_auth_user");
-    const snap = await db.collection("usuarios").where("username","==",savedUser).get();
-    if (snap.empty) { errEl.textContent = "Usuario no encontrado"; return; }
-    const doc = snap.docs[0];
-    const data = doc.data();
-    const currentHash = await hashPassword(current);
-    if (currentHash !== data.password && current !== data.password) {
-      errEl.textContent = "Contraseña actual incorrecta";
-      document.getElementById("cp-save-btn").disabled = false;
-      document.getElementById("cp-save-btn").textContent = "Guardar";
-      return;
-    }
-    const hashedNew = await hashPassword(newPass);
-    await db.collection("usuarios").doc(doc.id).update({ password: hashedNew });
+    const u = auth.currentUser;
+    // Reautenticar con la contraseña actual antes de cambiarla.
+    const cred = firebase.auth.EmailAuthProvider.credential(u.email, current);
+    await u.reauthenticateWithCredential(cred);
+    await u.updatePassword(newPass);
     logAction("cambiar_contraseña", "Contraseña actualizada por " + userName);
     closeModal();
     toast("Contraseña actualizada");
   } catch(e) {
     console.error("Error saving password:", e);
-    errEl.textContent = "Error al guardar. Intente de nuevo.";
+    errEl.textContent = (e && (e.code === "auth/wrong-password" || e.code === "auth/invalid-credential"))
+      ? "Contraseña actual incorrecta"
+      : authErrorMessage(e);
     document.getElementById("cp-save-btn").disabled = false;
     document.getElementById("cp-save-btn").textContent = "Guardar";
   }
 }
 
-async function checkAuth() {
-  try {
-    const auth = localStorage.getItem("inv_auth");
-    const token = parseAuthToken(auth);
-    if (token && token.username && firestoreReady) {
-      const snap = await db.collection("usuarios").where("username","==",token.username).get();
-      if (!snap.empty) {
-        const data = snap.docs[0].data();
-        userRole = data.role || "usuario";
-        userName = data.displayName || token.username;
-        userEmail = data.email || null;
-        userLabId = data.labId || null;
-
-        await loadLaboratorios();
-        if (userRole === "superadmin" || userRole === "usuario") {
-          currentLabId = laboratorios.length > 0 ? laboratorios[0].id : "lab_fisica";
-        } else {
-          currentLabId = userLabId;
-          if (userLabId) {
-            const labObj = laboratorios.find(l => l.id === userLabId);
-            userLabName = labObj ? labObj.name : userLabId;
-          }
-        }
-
-        document.getElementById("loginOverlay").hidden = true;
-        document.getElementById("appMain").hidden = false;
-        loadSolicitudes();
-        if (userRole === "superadmin") {
-          viewMode = "admin-home";
-          render();
-        } else {
-          viewMode = "dashboard";
-          loadData();
-          render();
-        }
+// Escucha los cambios de sesión de Firebase Auth. Es la ÚNICA puerta de
+// entrada a la app: al cargar la página, al iniciar sesión y al cerrarla.
+function initAuthListener() {
+  if (!auth) {
+    // Sin Firebase: mostrar login (la app no funciona sin backend).
+    showLoginScreen();
+    return;
+  }
+  auth.onAuthStateChanged(async (user) => {
+    if (suppressAuthHandler) return;
+    if (!user) {
+      showLoginScreen();
+      return;
+    }
+    try {
+      const doc = await db.collection("usuarios").doc(user.uid).get();
+      if (!doc.exists) {
+        // Cuenta de Auth sin perfil: acceso no autorizado.
+        await auth.signOut();
+        showLoginScreen();
+        const errEl = document.getElementById("loginError");
+        if (errEl) errEl.innerHTML = '<span style="color:var(--red)">Tu cuenta no tiene un perfil activo. Contacta al administrador.</span>';
         return;
       }
+      await enterApp(user.uid, doc.data());
+    } catch(e) {
+      console.error("Auth state error:", e);
+      showLoginScreen();
+      const errEl = document.getElementById("loginError");
+      if (errEl) errEl.textContent = "Error al cargar tu perfil. Intente de nuevo.";
     }
-    // Legacy: old "editor" or "1" tokens — redirect to new login
-    try { localStorage.removeItem("inv_auth"); localStorage.removeItem("inv_auth_user"); } catch(e) {}
-  } catch(e) {}
-  document.getElementById("loginOverlay").hidden = false;
-  document.getElementById("appMain").hidden = true;
-  document.getElementById("loginUser").focus();
+  });
 }
 
 // ═══════════════════════════════════════
@@ -4773,7 +4802,7 @@ async function renderUsersPanel() {
                 <summary class="user-action" title="Más acciones" aria-label="Más acciones" aria-haspopup="menu"><span class="mi">more_vert</span></summary>
                 <div class="user-menu-popover" role="menu">
                   <button class="user-menu-item" role="menuitem" onclick="this.closest('details').open=false;editUserDetails('${doc.id}','${esc(u.username)}','${esc(u.email||"")}','${esc(role)}','${esc(u.labId||"")}')"><span class="mi">edit</span>Editar</button>
-                  <button class="user-menu-item" role="menuitem" onclick="this.closest('details').open=false;resetUserPassword('${doc.id}','${esc(u.username)}')"><span class="mi">key</span>Cambiar contraseña</button>
+                  <button class="user-menu-item" role="menuitem" onclick="this.closest('details').open=false;resetUserPassword('${doc.id}','${esc(u.username)}','${esc(u.email||"")}')"><span class="mi">key</span>Restablecer contraseña</button>
                   <button class="user-menu-item danger" role="menuitem" onclick="this.closest('details').open=false;deleteUser('${doc.id}','${esc(u.username)}')"><span class="mi">delete</span>Eliminar</button>
                 </div>
               </details>` : ''}
@@ -4812,9 +4841,9 @@ function openAddUserModal() {
     <div class="modal-head"><h2>Crear usuario</h2><button class="modal-x" onclick="closeModal()" aria-label="Cerrar">&times;</button></div>
     <div class="modal-body">
       <div class="fg"><label for="f-newname">Nombre para mostrar</label><input id="f-newname" placeholder="Ej: Juan Pérez"></div>
-      <div class="fg"><label for="f-newemail">Correo electrónico</label><input id="f-newemail" type="email" placeholder="Ej: juan@email.com"></div>
+      <div class="fg"><label for="f-newemail">Correo electrónico (opcional)</label><input id="f-newemail" type="email" placeholder="Opcional — sin correo no recibe notificaciones"></div>
       <div class="fg"><label for="f-newuser">Nombre de usuario (login)</label><input id="f-newuser" placeholder="Ej: juanperez" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9._-]/g,'')"></div>
-      <div class="fg"><label for="f-newpass">Contraseña</label><input id="f-newpass" type="password" placeholder="Mínimo 4 caracteres"></div>
+      <div class="fg"><label for="f-newpass">Contraseña</label><input id="f-newpass" type="password" placeholder="Mínimo 6 caracteres"></div>
       <div class="fg"><label for="f-newrole">Rol</label><select id="f-newrole">${roleOptions}</select></div>
       <div class="fg"><label for="f-newlab">Laboratorio asignado</label><select id="f-newlab">${labOptions || '<option value="">Sin laboratorios</option>'}</select></div>
     </div>
@@ -4829,35 +4858,52 @@ async function saveNewUser() {
   const password = document.getElementById("f-newpass").value;
   const role = document.getElementById("f-newrole").value;
   const labId = document.getElementById("f-newlab").value;
+  const contactEmail = email.toLowerCase();
   if (!displayName) { toast("Ingrese un nombre"); return; }
-  if (!email) { toast("Ingrese un correo electrónico"); return; }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast("Correo electrónico no válido"); return; }
+  // El correo es OPCIONAL. Si se indica, debe ser válido; si no, la cuenta usa
+  // un email sintético interno (no recibirá notificaciones ni reset por correo).
+  if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) { toast("Correo electrónico no válido"); return; }
   if (!username || username.length < 3) { toast("Usuario debe tener al menos 3 caracteres"); return; }
-  if (!password || password.length < 4) { toast("Contraseña debe tener al menos 4 caracteres"); return; }
+  if (!/^[a-z0-9._-]+$/.test(username)) { toast("Usuario solo puede tener letras, números, puntos, guiones"); return; }
+  if (!password || password.length < 6) { toast("Contraseña debe tener al menos 6 caracteres"); return; }
   if (!labId) { toast("Seleccione un laboratorio"); return; }
-  if (!firestoreReady) { toast("Sin conexión a Firestore"); return; }
+  if (!firestoreReady || !auth) { toast("Sin conexión a Firestore"); return; }
 
+  const loginEmail = authEmailFor(username, contactEmail); // real o sintético
+
+  // Segunda instancia de Firebase: crea la cuenta sin tocar la sesión del admin.
+  let secondary = null;
   try {
-    const existing = await db.collection("usuarios").where("username","==",username).get();
-    if (!existing.empty) { toast("Ese nombre de usuario ya existe"); return; }
+    const taken = await db.collection("usernames").doc(username).get();
+    if (taken.exists) { toast("Ese nombre de usuario ya existe"); return; }
 
-    const hashedPass = await hashPassword(password);
-    await db.collection("usuarios").add({
+    secondary = firebase.initializeApp(firebaseConfig, "secondary-" + Date.now());
+    const cred = await secondary.auth().createUserWithEmailAndPassword(loginEmail, password);
+    const uid = cred.user.uid;
+    await secondary.auth().signOut();
+
+    // El admin (sesión principal) escribe el perfil y el mapa username.
+    // usuarios.email = correo de CONTACTO (vacío si no se indicó).
+    // usernames.email = email de LOGIN de Auth (real o sintético).
+    await db.collection("usuarios").doc(uid).set({
       username: username,
       displayName: displayName,
-      email: email,
-      password: hashedPass,
+      email: contactEmail,
       role: role,
       labId: labId,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+    await db.collection("usernames").doc(username).set({ email: loginEmail, uid: uid });
+
     logAction("crear_usuario", `${displayName} (@${username}) — ${getRoleLabel(role)}`);
     closeModal();
     toast("Usuario '" + displayName + "' creado");
     renderUsersPanel();
   } catch(e) {
     console.error("Error creating user:", e);
-    toast("Error al crear usuario");
+    toast(authErrorMessage(e));
+  } finally {
+    if (secondary) { try { await secondary.delete(); } catch(e) {} }
   }
 }
 
@@ -4868,7 +4914,7 @@ function editUserDetails(docId, username, currentEmail, currentRole, currentLabI
   document.getElementById("modalBox").innerHTML = `
     <div class="modal-head"><h2>Editar usuario — @${esc(username)}</h2><button class="modal-x" onclick="closeModal()" aria-label="Cerrar">&times;</button></div>
     <div class="modal-body">
-      <div class="fg"><label for="f-editemail">Correo electrónico</label><input id="f-editemail" type="email" value="${esc(currentEmail)}" placeholder="correo@email.com"></div>
+      <div class="fg"><label>Correo (login)</label><input type="email" value="${esc(currentEmail)}" disabled style="opacity:.6"><small style="color:var(--text-dim)">El correo de inicio de sesión no se puede cambiar desde aquí.</small></div>
       <div class="fg"><label for="f-editrole">Rol</label><select id="f-editrole">
         <option value="laboratorista" ${currentRole==="laboratorista"?"selected":""}>Laboratorista</option>
         <option value="usuario" ${currentRole==="usuario"?"selected":""}>Usuario</option>
@@ -4880,47 +4926,52 @@ function editUserDetails(docId, username, currentEmail, currentRole, currentLabI
 }
 
 async function doSaveUserDetails(docId) {
-  const email = document.getElementById("f-editemail").value.trim();
   const role = document.getElementById("f-editrole").value;
   const labId = document.getElementById("f-editlab").value;
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast("Correo no válido"); return; }
   if (!labId) { toast("Seleccione un laboratorio"); return; }
   try {
-    await db.collection("usuarios").doc(docId).update({ email, role, labId });
+    await db.collection("usuarios").doc(docId).update({ role, labId });
+    logAction("editar_usuario", `${docId} → ${getRoleLabel(role)}`);
     closeModal();
     toast("Usuario actualizado");
     renderUsersPanel();
-  } catch(e) { toast("Error al actualizar"); }
+  } catch(e) { console.error(e); toast("Error al actualizar"); }
 }
 
 async function deleteUser(docId, username) {
-  showConfirm("¿Eliminar usuario @" + esc(username) + "? Se eliminará su cuenta de acceso.", async function() {
+  showConfirm("¿Eliminar usuario @" + esc(username) + "? Perderá el acceso de inmediato.", async function() {
     try {
       await db.collection("usuarios").doc(docId).delete();
+      try { await db.collection("usernames").doc(username).delete(); } catch(e) {}
       logAction("eliminar_usuario", "@" + username);
       toast("Usuario eliminado");
       renderUsersPanel();
-    } catch(e) { toast("Error al eliminar"); }
+    } catch(e) { console.error(e); toast("Error al eliminar"); }
   });
 }
 
-async function resetUserPassword(docId, username) {
+// El admin no puede fijar la contraseña de otra cuenta desde el navegador
+// (eso requiere backend). En su lugar, envía un correo de restablecimiento
+// para que el propio usuario elija su nueva contraseña.
+async function resetUserPassword(docId, username, email) {
+  const safeEmail = email || "";
   document.getElementById("modalBox").innerHTML = `
-    <div class="modal-head"><h2>Cambiar contraseña — @${esc(username)}</h2><button class="modal-x" onclick="closeModal()" aria-label="Cerrar">&times;</button></div>
-    <div class="modal-body"><div class="fg"><label for="f-resetpass">Nueva contraseña</label><input id="f-resetpass" type="password" placeholder="Mínimo 4 caracteres"></div></div>
-    <div class="modal-foot"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-accent" onclick="doResetPassword('${docId}')">Guardar</button></div>`;
+    <div class="modal-head"><h2>Restablecer contraseña — @${esc(username)}</h2><button class="modal-x" onclick="closeModal()" aria-label="Cerrar">&times;</button></div>
+    <div class="modal-body">
+      <p style="color:var(--text-sec);font-size:14px;line-height:1.5">Se enviará un correo a <strong>${esc(safeEmail || "(sin correo)")}</strong> con un enlace para que el usuario establezca una nueva contraseña.</p>
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-accent" onclick="doSendReset('${esc(safeEmail)}','${esc(username)}')" ${safeEmail ? "" : "disabled"}>Enviar correo</button></div>`;
   document.getElementById("modalBg").hidden = false;
 }
 
-async function doResetPassword(docId) {
-  const newPass = document.getElementById("f-resetpass").value;
-  if (!newPass || newPass.length < 4) { toast("Mínimo 4 caracteres"); return; }
+async function doSendReset(email, username) {
+  if (!email || !auth) { toast("Sin correo registrado"); return; }
   try {
-    const hashedReset = await hashPassword(newPass);
-    await db.collection("usuarios").doc(docId).update({ password: hashedReset });
+    await auth.sendPasswordResetEmail(email);
+    logAction("reset_contraseña", "Enlace enviado a @" + username);
     closeModal();
-    toast("Contraseña actualizada");
-  } catch(e) { toast("Error al actualizar"); }
+    toast("Correo de restablecimiento enviado");
+  } catch(e) { console.error(e); toast(authErrorMessage(e)); }
 }
 
 // editUserEmail replaced by editUserDetails above
@@ -4943,6 +4994,7 @@ async function loadSolicitudes() {
       // Re-render if viewing solicitudes
       if (viewMode === "solicitudes" || viewMode === "mis-solicitudes") renderContent();
       updateSolicitudesBadge();
+      updateTitleBadge();
     });
   } catch(e) {}
 }
@@ -5238,15 +5290,15 @@ async function sendEmailNotification(sol, newStatus) {
   const statusMessages = {
     "aprobada": {
       subject: `✅ Préstamo Aprobado — ${labName}`,
-      message: `Hola ${sol.requestedBy},\n\nTu solicitud de préstamo ha sido APROBADA.\n\n📦 Ítem: ${sol.itemName}\n📍 Ubicación: ${sol.location} → ${sol.drawer}\n📊 Cantidad: ${sol.quantity || 1}\n📅 ${getReturnInfo(sol)}\n🔬 Laboratorio: ${labName}\n\nPuedes pasar a recoger el equipo al laboratorio.\n\n— Sistema de Inventario UNISANGIL`
+      message: `Hola ${sol.requestedBy},\n\nTu solicitud de préstamo ha sido APROBADA.\n\n📦 Ítem: ${sol.itemName}\n📍 Ubicación: ${sol.location} → ${sol.drawer}\n📊 Cantidad: ${sol.quantity || 1}\n📅 ${getReturnInfo(sol)}\n🔬 Laboratorio: ${labName}\n\nPuedes pasar a recoger el equipo al laboratorio.\n\n— App Inventory`
     },
     "rechazada": {
       subject: `❌ Solicitud Rechazada — ${labName}`,
-      message: `Hola ${sol.requestedBy},\n\nTu solicitud de préstamo ha sido RECHAZADA.\n\n📦 Ítem: ${sol.itemName}\n📍 Ubicación: ${sol.location} → ${sol.drawer}\n🔬 Laboratorio: ${labName}\n\nSi tienes dudas, consulta con el encargado del laboratorio.\n\n— Sistema de Inventario UNISANGIL`
+      message: `Hola ${sol.requestedBy},\n\nTu solicitud de préstamo ha sido RECHAZADA.\n\n📦 Ítem: ${sol.itemName}\n📍 Ubicación: ${sol.location} → ${sol.drawer}\n🔬 Laboratorio: ${labName}\n\nSi tienes dudas, consulta con el encargado del laboratorio.\n\n— App Inventory`
     },
     "devuelto": {
       subject: `🔄 Devolución Registrada — ${labName}`,
-      message: `Hola ${sol.requestedBy},\n\nSe ha registrado la devolución del equipo.\n\n📦 Ítem: ${sol.itemName}\n🔬 Laboratorio: ${labName}\n\nGracias por devolver el equipo en buen estado.\n\n— Sistema de Inventario UNISANGIL`
+      message: `Hola ${sol.requestedBy},\n\nSe ha registrado la devolución del equipo.\n\n📦 Ítem: ${sol.itemName}\n🔬 Laboratorio: ${labName}\n\nGracias por devolver el equipo en buen estado.\n\n— App Inventory`
     }
   };
 
@@ -5286,7 +5338,7 @@ async function notifyLabStaffNewRequest(sol) {
   if (recipients.length === 0) return;
 
   const subject = `📋 Nueva Solicitud de Préstamo — ${labName}`;
-  const message = `Se ha recibido una nueva solicitud de préstamo.\n\n👤 Solicitante: ${sol.requestedBy}\n📦 Ítem: ${sol.itemName}\n📍 Ubicación: ${sol.location} → ${sol.drawer}\n📊 Cantidad: ${sol.quantity || 1}\n📅 ${getReturnInfo(sol)}\n🔬 Laboratorio: ${labName}${sol.notes ? "\n💬 Nota: " + sol.notes : ""}\n\nIngresa al sistema para aprobar o rechazar la solicitud.\n\n— Sistema de Inventario UNISANGIL`;
+  const message = `Se ha recibido una nueva solicitud de préstamo.\n\n👤 Solicitante: ${sol.requestedBy}\n📦 Ítem: ${sol.itemName}\n📍 Ubicación: ${sol.location} → ${sol.drawer}\n📊 Cantidad: ${sol.quantity || 1}\n📅 ${getReturnInfo(sol)}\n🔬 Laboratorio: ${labName}${sol.notes ? "\n💬 Nota: " + sol.notes : ""}\n\nIngresa al sistema para aprobar o rechazar la solicitud.\n\n— App Inventory`;
 
   let sent = 0;
   for (const r of recipients) {
@@ -5572,34 +5624,18 @@ function updateTitleBadge() {
   const relevant = getSolicitudesForRole();
   const pending = relevant.filter(s => s.status === "pendiente").length;
   const lab = laboratorios.find(l => l.id === currentLabId);
-  const base = lab ? lab.name : "Inventario de Laboratorios";
+  const base = lab ? lab.name : "App Inventory";
   document.title = pending > 0 ? `(${pending}) ${base}` : base;
 }
 
 // ═══════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════
-// Setup: ensure superadmin and default lab exist
-if (firestoreReady && db) {
-  ensureSuperadmin();
-  ensureDefaultLab();
-}
-checkAuth().then(() => {
-  // checkAuth already loads data & renders for superadmin (admin-home) and other roles
-  if (userRole !== "superadmin" && !currentLabId) {
-    loadData();
-  }
-  if (viewMode !== "admin-home") render();
-  updateTitleBadge();
-  migratePasswords();
-  initConnectionMonitor();
-  // Update title badge when solicitudes change
-  if (firestoreReady && db) {
-    try {
-      db.collection("solicitudes").onSnapshot(() => { updateTitleBadge(); });
-    } catch(e) {}
-  }
-});
+// Mostrar login de inmediato; Firebase Auth decide si hay sesión activa.
+showLoginScreen();
+initConnectionMonitor();
+// onAuthStateChanged es la puerta única: restaura sesión, login y logout.
+initAuthListener();
 // Update print date on beforeprint
 window.addEventListener("beforeprint", function() {
   const dateEl = document.getElementById("printDate");

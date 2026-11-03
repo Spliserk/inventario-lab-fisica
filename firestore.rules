@@ -1,0 +1,116 @@
+rules_version = '2';
+
+// ═══════════════════════════════════════════════════════════════════
+//  Reglas de seguridad de Firestore — Inventario Lab Física UNISANGIL
+// ───────────────────────────────────────────────────────────────────
+//  Modelo: autenticación con Firebase Auth (email + contraseña).
+//  Los roles viven en /usuarios/{uid} y se validan AQUÍ, en el servidor.
+//  Nada de esto se puede saltar desde el cliente.
+//
+//  Despliegue:
+//    Firebase Console → Firestore Database → Reglas → pegar y Publicar.
+//    (o)  npx firebase-tools deploy --only firestore:rules
+// ═══════════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- Helpers ----
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    // Perfil del usuario que hace la petición (lee su propio doc /usuarios/{uid})
+    function profile() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+    function hasProfile() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+    function roleIs(r) {
+      return hasProfile() && profile().role == r;
+    }
+    function isSuperadmin() { return roleIs('superadmin'); }
+    function isLab()        { return roleIs('laboratorista'); }
+    function myLab()        { return hasProfile() ? profile().labId : null; }
+    // Staff = puede gestionar (superadmin o laboratorista)
+    function isStaff()      { return isSuperadmin() || isLab(); }
+
+    // ───────────── /usuarios/{uid} — perfiles y roles ─────────────
+    // El uid del doc SIEMPRE coincide con el uid de Firebase Auth.
+    match /usuarios/{uid} {
+      // Leer: cualquier usuario autenticado. Los perfiles ya NO contienen
+      // contraseñas (las gestiona Firebase Auth); solo nombre, email, rol y lab.
+      // Esto es necesario para que el cliente pueda notificar por correo al staff
+      // de un lab cuando un usuario solicita un préstamo (no hay backend que lo haga).
+      // La escritura —la frontera de seguridad real— sí está restringida abajo.
+      allow read: if isSignedIn();
+
+      // Crear tu propio perfil al auto-registrarte: SOLO rol "usuario" y sin lab.
+      // Un superadmin puede crear el perfil de otra cuenta (uid distinto) con cualquier rol permitido.
+      allow create: if
+        (request.auth.uid == uid
+          && request.resource.data.role == 'usuario'
+          && request.resource.data.labId == null)
+        || isSuperadmin();
+
+      // Actualizar: el superadmin puede todo; el propio usuario solo campos
+      // no sensibles (no puede cambiarse su rol ni su lab).
+      allow update: if isSuperadmin()
+        || (request.auth.uid == uid
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.labId == resource.data.labId);
+
+      allow delete: if isSuperadmin();
+    }
+
+    // ───────────── /usernames/{username} — mapa usuario→email (login) ─────────────
+    // Se consulta ANTES de iniciar sesión para resolver el email del username.
+    // get: permitido sin auth (solo devuelve el email de ese username exacto).
+    // list: PROHIBIDO (no se puede volcar la lista completa).
+    match /usernames/{username} {
+      allow get:  if true;
+      allow list: if isSuperadmin();
+      allow create, update: if isSuperadmin()
+        || (isSignedIn() && request.resource.data.uid == request.auth.uid);
+      allow delete: if isSuperadmin();
+    }
+
+    // ───────────── /laboratorios/{labId} ─────────────
+    match /laboratorios/{labId} {
+      allow read:  if isSignedIn();
+      allow write: if isSuperadmin();
+    }
+
+    // ───────────── /inventario/{labId} — datos del inventario ─────────────
+    match /inventario/{labId} {
+      allow read: if isSignedIn();
+      // Escribe el superadmin, o el laboratorista SOLO de su propio lab.
+      allow write: if isSuperadmin() || (isLab() && myLab() == labId);
+    }
+
+    // ───────────── /solicitudes/{id} — préstamos ─────────────
+    match /solicitudes/{id} {
+      allow read:   if isSignedIn();
+      allow create: if isSignedIn();           // cualquier usuario solicita
+      allow update, delete: if isStaff();       // aprueba/rechaza/devuelve el staff
+    }
+
+    // ───────────── /historial/{id} — bitácora de auditoría ─────────────
+    match /historial/{id} {
+      allow read:   if isStaff();
+      allow create: if isSignedIn();
+      allow update, delete: if false;           // la auditoría es inmutable
+    }
+
+    // ───────────── /_connectivity — ping de conexión (sin datos sensibles) ─────────────
+    match /_connectivity/{doc} {
+      allow read, write: if true;
+    }
+
+    // ───────────── Todo lo demás: denegado ─────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
