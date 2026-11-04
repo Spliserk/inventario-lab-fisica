@@ -25,12 +25,12 @@ async function loadSolicitudes() {
 
 function getSolicitudesForRole() {
   // Returns the solicitudes relevant to the current user's role and lab
-  if (userRole === "superadmin") return solicitudes; // superadmin sees all
+  if (isAdmin()) return solicitudes; // admin/superadmin ven todas
   if (userRole === "laboratorista" || userRole === "editor") {
-    // Laboratorista only sees solicitudes for their assigned lab
-    const myLab = currentLabId || userLabId;
-    if (!myLab) return solicitudes;
-    return solicitudes.filter(s => (s.labId || "lab_fisica") === myLab);
+    // El laboratorista ve las solicitudes de TODOS sus laboratorios asignados.
+    const myLabs = userLabList();
+    if (!myLabs.length) return solicitudes;
+    return solicitudes.filter(s => myLabs.includes(s.labId || "lab_fisica"));
   }
   // usuario sees only their own
   return solicitudes.filter(s => s.requestedBy === userName);
@@ -47,12 +47,12 @@ function updateSolicitudesBadge() {
 }
 
 function openSolicitudesPanel(global) {
-  if (global && userRole === "superadmin") {
+  if (global && isAdmin()) {
     if (firestoreUnsubscribe) { firestoreUnsubscribe(); firestoreUnsubscribe = null; }
     currentLabId = null;
   }
   currentLoc = null; currentDrawer = null;
-  viewMode = (userRole === "superadmin" || userRole === "laboratorista") ? "solicitudes" : "mis-solicitudes";
+  viewMode = (isAdmin() || userRole === "laboratorista") ? "solicitudes" : "mis-solicitudes";
   render();
 }
 
@@ -64,10 +64,10 @@ function renderSolicitudesPanel() {
   if (userRole === "usuario" || userRole === "lector") {
     list = solicitudes.filter(s => s.requestedBy === userName);
   } else if (userRole === "laboratorista" || userRole === "editor") {
-    const myLab = currentLabId || userLabId;
-    list = myLab ? solicitudes.filter(s => (s.labId || "lab_fisica") === myLab) : solicitudes;
+    const myLabs = userLabList();
+    list = myLabs.length ? solicitudes.filter(s => myLabs.includes(s.labId || "lab_fisica")) : solicitudes;
   } else {
-    // superadmin — filter by selected lab if any
+    // admin/superadmin — filter by selected lab if any
     const labFilter = window._solLabFilter || "all";
     list = labFilter === "all" ? solicitudes : solicitudes.filter(s => (s.labId || "lab_fisica") === labFilter);
   }
@@ -77,7 +77,7 @@ function renderSolicitudesPanel() {
     (isEditor ? 'Solicitudes de Préstamo' : 'Mis Solicitudes') + '</h2>';
 
   // Superadmin lab filter dropdown
-  if (userRole === "superadmin" && laboratorios.length > 0) {
+  if (isAdmin() && laboratorios.length > 0) {
     const labFilter = window._solLabFilter || "all";
     html += '<div style="margin-bottom:14px;display:flex;align-items:center;gap:8px">';
     html += '<span style="font-size:13px;color:var(--text-sec)">Laboratorio:</span>';
@@ -119,7 +119,7 @@ function renderSolicitudesPanel() {
       const returnLabel = isHourLoan ? "Duración" : "Devolución";
       // Show lab name for superadmin
       const solLab = laboratorios.find(l => l.id === (s.labId || "lab_fisica"));
-      const labTag = (userRole === "superadmin" && solLab) ? `<span style="font-size:11px;color:var(--purple);background:var(--purple-bg);padding:2px 8px;border-radius:10px;margin-left:6px">🔬 ${esc(solLab.name)}</span>` : '';
+      const labTag = (isAdmin() && solLab) ? `<span style="font-size:11px;color:var(--purple);background:var(--purple-bg);padding:2px 8px;border-radius:10px;margin-left:6px">🔬 ${esc(solLab.name)}</span>` : '';
       html += `<div class="req-card">
         <div class="req-header">
           <span class="req-user">👤 ${esc(s.requestedBy)}${labTag}</span>
@@ -348,12 +348,13 @@ async function notifyLabStaffNewRequest(sol) {
     for (const doc of usersSnap.docs) {
       const u = doc.data();
       if (!u.email) continue;
-      // Laboratoristas de este lab
-      if ((u.role === "laboratorista" || u.role === "editor") && u.labId === labId) {
+      // Laboratoristas asignados a este lab (soporta uno o varios: labIds o labId)
+      const uLabs = Array.isArray(u.labIds) ? u.labIds : (u.labId ? [u.labId] : []);
+      if ((u.role === "laboratorista" || u.role === "editor") && uLabs.includes(labId)) {
         recipients.push({ name: u.displayName || u.username, email: u.email });
       }
-      // Superadmins reciben de todos los labs
-      if (u.role === "superadmin") {
+      // Admin y superadmin reciben de todos los labs
+      if (u.role === "superadmin" || u.role === "admin") {
         recipients.push({ name: u.displayName || u.username, email: u.email });
       }
     }

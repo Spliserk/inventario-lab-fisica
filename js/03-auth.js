@@ -44,14 +44,17 @@ async function enterApp(uid, data) {
   userRole = data.role || "usuario";
   userName = data.displayName || data.username || "Usuario";
   userEmail = data.email || null;
-  userLabId = data.labId || null;
+  // Soporta varios laboratorios (labIds) o uno solo (labId, formato anterior).
+  userLabIds = Array.isArray(data.labIds) ? data.labIds.filter(Boolean)
+             : (data.labId ? [data.labId] : []);
+  userLabId = userLabIds[0] || null;
   userLabName = null;
 
   await loadLaboratorios();
-  if (userRole === "superadmin" || userRole === "usuario") {
+  if (isAdmin() || userRole === "usuario") {
     currentLabId = laboratorios.length > 0 ? laboratorios[0].id : "lab_fisica";
   } else {
-    // Laboratorista — solo su lab asignado
+    // Laboratorista — su primer laboratorio asignado (puede cambiar si tiene varios)
     currentLabId = userLabId;
     if (userLabId) {
       const labObj = laboratorios.find(l => l.id === userLabId);
@@ -65,7 +68,7 @@ async function enterApp(uid, data) {
   const loginErr = document.getElementById("loginError");
   if (loginErr) loginErr.textContent = "";
   loadSolicitudes();
-  if (userRole === "superadmin") {
+  if (isAdmin()) {
     viewMode = "admin-home";
     render();
   } else {

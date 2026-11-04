@@ -78,18 +78,33 @@ function saveCollapsedNavLocs() {
 // ═══════════════════════════════════════
 //  USER ROLES
 // ═══════════════════════════════════════
-let userRole = null;     // "superadmin" | "laboratorista" | "usuario"
+let userRole = null;     // "superadmin" | "admin" | "laboratorista" | "usuario"
 let userName = null;     // nombre para mostrar del usuario logueado
 let currentUid = null;   // uid de Firebase Auth del usuario logueado
 let currentUsername = null; // nombre de usuario (login) del usuario logueado
 let userEmail = null;    // correo del usuario logueado
-let userLabId = null;    // lab asignado al laboratorista/usuario
+let userLabId = null;    // lab principal (compatibilidad); primero de userLabIds
+let userLabIds = [];     // laboratorios asignados al laboratorista (puede ser varios)
 let userLabName = null;  // nombre del lab asignado
-let currentLabId = null; // lab actualmente visualizado (superadmin puede cambiar)
+let currentLabId = null; // lab actualmente visualizado (admin/laboratorista puede cambiar)
 let laboratorios = [];   // lista de laboratorios [{id, name, code, ...}]
 
+// ── Roles y permisos ──
+// "superadmin" y "admin" tienen los MISMOS poderes; la única diferencia es que
+// el superadmin NO se puede eliminar. Usa isAdmin() para los permisos.
+function isAdmin() { return userRole === "superadmin" || userRole === "admin"; }
+function roleHasAdminPowers(role) { return role === "superadmin" || role === "admin"; }
+
+// Laboratorios a los que el usuario actual tiene acceso (los admin acceden a todos).
+function userLabList() {
+  if (userLabIds && userLabIds.length) return userLabIds;
+  return userLabId ? [userLabId] : [];
+}
+// ¿El usuario actual puede operar en este laboratorio?
+function canAccessLab(labId) { return isAdmin() || userLabList().includes(labId); }
+
 // Helper: can this user edit inventory?
-function canEdit() { return userRole === "superadmin" || userRole === "laboratorista" || userRole === "editor"; }
+function canEdit() { return isAdmin() || userRole === "laboratorista" || userRole === "editor"; }
 // Helper: is this a read-only user? (includes legacy "lector" role)
 function isReadOnly() { return !canEdit(); }
 

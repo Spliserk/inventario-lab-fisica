@@ -182,7 +182,7 @@ function printInventory() {
 // ═══════════════════════════════════════
 async function openAuditLog(global) {
   if (!firestoreReady) { toast("Sin conexión"); return; }
-  if (global && userRole === "superadmin") {
+  if (global && isAdmin()) {
     if (firestoreUnsubscribe) { firestoreUnsubscribe(); firestoreUnsubscribe = null; }
     currentLabId = null;
   }
@@ -197,7 +197,7 @@ async function openAuditLog(global) {
     let html = '<div style="max-width:700px;margin:0 auto;padding:20px">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
     html += '<h2 style="font-family:var(--sans);font-size:18px;margin:0">Historial de Cambios</h2>';
-    html += `<button class="btn btn-sm" onclick="${userRole==='superadmin'?'goToAdminHome()':'goToDashboard()'}">← Volver</button></div>`;
+    html += `<button class="btn btn-sm" onclick="${isAdmin()?'goToAdminHome()':'goToDashboard()'}">← Volver</button></div>`;
 
     if (snap.empty) {
       html += '<p style="color:var(--text-sec);text-align:center;padding:30px 0">No hay registros aún</p>';

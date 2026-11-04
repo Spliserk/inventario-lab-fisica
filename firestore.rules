@@ -31,10 +31,18 @@ service cloud.firestore {
       return hasProfile() && profile().role == r;
     }
     function isSuperadmin() { return roleIs('superadmin'); }
+    // "admin" tiene los mismos poderes que "superadmin" (pero sí se puede borrar).
+    function isAdmin()      { return isSuperadmin() || roleIs('admin'); }
     function isLab()        { return roleIs('laboratorista'); }
-    function myLab()        { return hasProfile() ? profile().labId : null; }
-    // Staff = puede gestionar (superadmin o laboratorista)
-    function isStaff()      { return isSuperadmin() || isLab(); }
+    // Laboratorios asignados al solicitante (soporta labIds[] o labId).
+    function myLabs() {
+      return hasProfile()
+        ? (('labIds' in profile()) ? profile().labIds
+           : (profile().labId != null ? [profile().labId] : []))
+        : [];
+    }
+    // Staff = puede gestionar (admin/superadmin o laboratorista)
+    function isStaff()      { return isAdmin() || isLab(); }
 
     // ───────────── /usuarios/{uid} — perfiles y roles ─────────────
     // El uid del doc SIEMPRE coincide con el uid de Firebase Auth.
@@ -47,21 +55,27 @@ service cloud.firestore {
       allow read: if isSignedIn();
 
       // Crear tu propio perfil al auto-registrarte: SOLO rol "usuario" y sin lab.
-      // Un superadmin puede crear el perfil de otra cuenta (uid distinto) con cualquier rol permitido.
+      // Un admin/superadmin puede crear el perfil de otra cuenta con cualquier rol
+      // permitido (pero NUNCA otro superadmin: ese se crea a mano en la consola).
       allow create: if
         (request.auth.uid == uid
           && request.resource.data.role == 'usuario'
           && request.resource.data.labId == null)
-        || isSuperadmin();
+        || (isAdmin() && request.resource.data.role != 'superadmin');
 
-      // Actualizar: el superadmin puede todo; el propio usuario solo campos
-      // no sensibles (no puede cambiarse su rol ni su lab).
-      allow update: if isSuperadmin()
+      // Actualizar: los admin pueden gestionar, PERO un documento de superadmin
+      // solo lo puede tocar otro superadmin (protege al superadmin de ser degradado).
+      // El propio usuario solo puede cambiar campos no sensibles (ni rol ni labs).
+      allow update: if
+        (isAdmin() && resource.data.role != 'superadmin'
+           && request.resource.data.role != 'superadmin')
+        || isSuperadmin()
         || (request.auth.uid == uid
             && request.resource.data.role == resource.data.role
             && request.resource.data.labId == resource.data.labId);
 
-      allow delete: if isSuperadmin();
+      // Eliminar: admin, pero NUNCA a un superadmin (es indestructible).
+      allow delete: if isAdmin() && resource.data.role != 'superadmin';
     }
 
     // ───────────── /usernames/{username} — mapa usuario→email (login) ─────────────
@@ -70,23 +84,23 @@ service cloud.firestore {
     // list: PROHIBIDO (no se puede volcar la lista completa).
     match /usernames/{username} {
       allow get:  if true;
-      allow list: if isSuperadmin();
-      allow create, update: if isSuperadmin()
+      allow list: if isAdmin();
+      allow create, update: if isAdmin()
         || (isSignedIn() && request.resource.data.uid == request.auth.uid);
-      allow delete: if isSuperadmin();
+      allow delete: if isAdmin();
     }
 
     // ───────────── /laboratorios/{labId} ─────────────
     match /laboratorios/{labId} {
       allow read:  if isSignedIn();
-      allow write: if isSuperadmin();
+      allow write: if isAdmin();
     }
 
     // ───────────── /inventario/{labId} — datos del inventario ─────────────
     match /inventario/{labId} {
       allow read: if isSignedIn();
-      // Escribe el superadmin, o el laboratorista SOLO de su propio lab.
-      allow write: if isSuperadmin() || (isLab() && myLab() == labId);
+      // Escribe el admin/superadmin, o el laboratorista SOLO de los labs que tiene asignados.
+      allow write: if isAdmin() || (isLab() && (labId in myLabs()));
     }
 
     // ───────────── /solicitudes/{id} — préstamos ─────────────

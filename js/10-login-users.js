@@ -110,6 +110,7 @@ function showLoginScreen() {
   currentUsername = null;
   userEmail = null;
   userLabId = null;
+  userLabIds = [];
   userLabName = null;
   currentLabId = null;
   viewMode = "dashboard";
@@ -299,8 +300,8 @@ function initAuthListener() {
 //  USER ACCOUNT MANAGEMENT
 // ═══════════════════════════════════════
 function openUserManager(global) {
-  if (userRole !== "superadmin" && userRole !== "laboratorista") return;
-  if (global && userRole === "superadmin") {
+  if (!isAdmin() && userRole !== "laboratorista") return;
+  if (global && isAdmin()) {
     // Called from admin-home — clear lab context so sidebar hides
     if (firestoreUnsubscribe) { firestoreUnsubscribe(); firestoreUnsubscribe = null; }
     currentLabId = null;
@@ -311,20 +312,28 @@ function openUserManager(global) {
 }
 
 function getRoleLabel(role) {
-  const labels = { superadmin: "Super Admin", laboratorista: "Laboratorista", usuario: "Usuario", editor: "Laboratorista", lector: "Usuario" };
+  const labels = { superadmin: "Super Admin", admin: "Administrador", laboratorista: "Laboratorista", usuario: "Usuario", editor: "Laboratorista", lector: "Usuario" };
   return labels[role] || role;
 }
 
 function getRoleColor(role) {
-  const colors = { superadmin: "var(--purple)", laboratorista: "var(--accent)", usuario: "var(--green)", editor: "var(--accent)", lector: "var(--green)" };
+  const colors = { superadmin: "var(--purple)", admin: "var(--purple)", laboratorista: "var(--accent)", usuario: "var(--green)", editor: "var(--accent)", lector: "var(--green)" };
   return colors[role] || "var(--text-sec)";
 }
 
+// Lista de laboratorios de un documento de usuario (soporta labIds o labId).
+function userDocLabs(u) {
+  return Array.isArray(u.labIds) ? u.labIds.filter(Boolean) : (u.labId ? [u.labId] : []);
+}
+function labNamesFor(labIds) {
+  return labIds.map(id => (laboratorios.find(l => l.id === id) || {}).name || id).join(", ");
+}
+
 async function renderUsersPanel() {
-  const isSuperadmin = userRole === "superadmin";
+  const canManage = isAdmin(); // admin y superadmin pueden crear/editar/eliminar
   let html = '<div class="users-panel">';
   html += '<div class="users-heading"><div><h2>Gestión de Usuarios</h2><p>Administra cuentas y permisos de acceso.</p></div>';
-  if (isSuperadmin) {
+  if (canManage) {
     html += '<button class="btn btn-accent btn-sm" onclick="openAddUserModal()"><span class="mi" style="font-size:18px">person_add</span> Nuevo usuario</button>';
   }
   html += '</div>';
@@ -341,22 +350,25 @@ async function renderUsersPanel() {
         html += '<div class="users-list">';
         snap.forEach(doc => {
           const u = doc.data();
-          // Laboratoristas only see users assigned to their lab
-          if (userRole === "laboratorista" && u.role !== "usuario") return;
-          if (userRole === "laboratorista" && u.labId !== userLabId) return;
           const role = u.role || "usuario";
-          const labName = u.labId ? (laboratorios.find(l=>l.id===u.labId)||{}).name || u.labId : "—";
+          const uLabs = userDocLabs(u);
+          // Laboratoristas only see users assigned to their lab(s)
+          if (userRole === "laboratorista" && u.role !== "usuario") return;
+          if (userRole === "laboratorista" && !uLabs.some(l => userLabList().includes(l))) return;
+          const labName = uLabs.length ? labNamesFor(uLabs) : "—";
           const searchText = [u.displayName||u.username, u.username, u.email||"", role, labName].join(" ").toLocaleLowerCase();
+          // El superadmin está protegido: no se puede editar ni eliminar.
+          const canActOn = canManage && role !== "superadmin";
           html += `<div class="user-card" data-search="${esc(searchText)}">
             <div class="user-info"><span class="user-name">${esc(u.displayName||u.username)}</span>
             <div class="user-meta"><span class="user-username">@${esc(u.username)}</span><span class="user-role" style="color:${getRoleColor(role)};font-weight:600">${getRoleLabel(role)}</span>
-            ${role !== "superadmin" ? `<span style="color:var(--text-dim);font-size:12px">🔬 ${esc(labName)}</span>` : ''}
+            ${uLabs.length ? `<span style="color:var(--text-dim);font-size:12px">🔬 ${esc(labName)}</span>` : ''}
             ${u.email ? `<span class="user-email">${esc(u.email)}</span>` : '<span class="user-missing-email">Sin correo</span>'}</div></div>
             <div class="user-actions">
-              ${isSuperadmin && role !== "superadmin" ? `<details class="user-menu">
+              ${canActOn ? `<details class="user-menu">
                 <summary class="user-action" title="Más acciones" aria-label="Más acciones" aria-haspopup="menu"><span class="mi">more_vert</span></summary>
                 <div class="user-menu-popover" role="menu">
-                  <button class="user-menu-item" role="menuitem" onclick="this.closest('details').open=false;editUserDetails('${doc.id}','${esc(u.username)}','${esc(u.email||"")}','${esc(role)}','${esc(u.labId||"")}')"><span class="mi">edit</span>Editar</button>
+                  <button class="user-menu-item" role="menuitem" onclick="this.closest('details').open=false;editUserDetails('${doc.id}')"><span class="mi">edit</span>Editar</button>
                   <button class="user-menu-item" role="menuitem" onclick="this.closest('details').open=false;resetUserPassword('${doc.id}','${esc(u.username)}','${esc(u.email||"")}')"><span class="mi">key</span>Restablecer contraseña</button>
                   <button class="user-menu-item danger" role="menuitem" onclick="this.closest('details').open=false;deleteUser('${doc.id}','${esc(u.username)}')"><span class="mi">delete</span>Eliminar</button>
                 </div>
@@ -387,11 +399,27 @@ function filterUsers(query) {
   if (noResults) noResults.hidden = visibleCount > 0;
 }
 
+// Casillas de laboratorios (selección múltiple) para asignar a un laboratorista.
+function labCheckboxesHtml(selectedIds) {
+  const sel = selectedIds || [];
+  if (!laboratorios.length) return '<p style="color:var(--text-dim);font-size:13px">No hay laboratorios creados.</p>';
+  return laboratorios.map(l =>
+    `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer">
+      <input type="checkbox" class="lab-check" value="${esc(l.id)}" ${sel.includes(l.id) ? "checked" : ""}>
+      <span>${esc(l.name)}</span>
+    </label>`
+  ).join('');
+}
+// Muestra/oculta las casillas de laboratorio según el rol elegido.
+function toggleLabPicker(roleSelectId, wrapId) {
+  const role = document.getElementById(roleSelectId).value;
+  const wrap = document.getElementById(wrapId);
+  if (wrap) wrap.style.display = (role === "laboratorista") ? "block" : "none";
+}
+
 function openAddUserModal() {
-  const labOptions = laboratorios.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('');
-  const roleOptions = userRole === "superadmin"
-    ? `<option value="laboratorista">Laboratorista</option><option value="usuario">Usuario</option>`
-    : `<option value="usuario">Usuario</option>`;
+  // Solo quien tiene poderes de admin llega aquí; puede crear admin/laboratorista/usuario.
+  const roleOptions = `<option value="usuario">Usuario</option><option value="laboratorista">Laboratorista</option><option value="admin">Administrador</option>`;
   document.getElementById("modalBox").innerHTML = `
     <div class="modal-head"><h2>Crear usuario</h2><button class="modal-x" onclick="closeModal()" aria-label="Cerrar">&times;</button></div>
     <div class="modal-body">
@@ -399,8 +427,8 @@ function openAddUserModal() {
       <div class="fg"><label for="f-newemail">Correo electrónico (opcional)</label><input id="f-newemail" type="email" placeholder="Opcional — sin correo no recibe notificaciones"></div>
       <div class="fg"><label for="f-newuser">Nombre de usuario (login)</label><input id="f-newuser" placeholder="Ej: juanperez" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9._-]/g,'')"></div>
       <div class="fg"><label for="f-newpass">Contraseña</label><input id="f-newpass" type="password" placeholder="Mínimo 6 caracteres"></div>
-      <div class="fg"><label for="f-newrole">Rol</label><select id="f-newrole">${roleOptions}</select></div>
-      <div class="fg"><label for="f-newlab">Laboratorio asignado</label><select id="f-newlab">${labOptions || '<option value="">Sin laboratorios</option>'}</select></div>
+      <div class="fg"><label for="f-newrole">Rol</label><select id="f-newrole" onchange="toggleLabPicker('f-newrole','f-newlabwrap')">${roleOptions}</select></div>
+      <div class="fg" id="f-newlabwrap" style="display:none"><label>Laboratorios asignados</label><div style="border:1px solid var(--border);border-radius:var(--radius);padding:4px 12px;max-height:180px;overflow:auto">${labCheckboxesHtml([])}</div></div>
     </div>
     <div class="modal-foot"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-accent" onclick="saveNewUser()">Crear usuario</button></div>`;
   document.getElementById("modalBg").hidden = false;
@@ -412,7 +440,8 @@ async function saveNewUser() {
   const username = document.getElementById("f-newuser").value.trim().toLowerCase();
   const password = document.getElementById("f-newpass").value;
   const role = document.getElementById("f-newrole").value;
-  const labId = document.getElementById("f-newlab").value;
+  // Laboratorios marcados (solo aplican al rol laboratorista).
+  const labIds = [...document.querySelectorAll("#f-newlabwrap .lab-check:checked")].map(c => c.value);
   const contactEmail = email.toLowerCase();
   if (!displayName) { toast("Ingrese un nombre"); return; }
   // El correo es OPCIONAL. Si se indica, debe ser válido; si no, la cuenta usa
@@ -421,7 +450,7 @@ async function saveNewUser() {
   if (!username || username.length < 3) { toast("Usuario debe tener al menos 3 caracteres"); return; }
   if (!/^[a-z0-9._-]+$/.test(username)) { toast("Usuario solo puede tener letras, números, puntos, guiones"); return; }
   if (!password || password.length < 6) { toast("Contraseña debe tener al menos 6 caracteres"); return; }
-  if (!labId) { toast("Seleccione un laboratorio"); return; }
+  if (role === "laboratorista" && labIds.length === 0) { toast("Seleccione al menos un laboratorio"); return; }
   if (!firestoreReady || !auth) { toast("Sin conexión a Firestore"); return; }
 
   const loginEmail = authEmailFor(username, contactEmail); // real o sintético
@@ -445,7 +474,8 @@ async function saveNewUser() {
       displayName: displayName,
       email: contactEmail,
       role: role,
-      labId: labId,
+      labIds: labIds,              // laboratorios asignados (vacío si no es laboratorista)
+      labId: labIds[0] || null,    // compatibilidad con el formato anterior
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     await db.collection("usernames").doc(username).set({ email: loginEmail, uid: uid });
@@ -462,19 +492,22 @@ async function saveNewUser() {
   }
 }
 
-function editUserDetails(docId, username, currentEmail, currentRole, currentLabId) {
-  const labOptions = laboratorios.map(l =>
-    `<option value="${esc(l.id)}" ${l.id === currentLabId ? 'selected' : ''}>${esc(l.name)}</option>`
-  ).join('');
+async function editUserDetails(docId) {
+  let u = {};
+  try { const d = await db.collection("usuarios").doc(docId).get(); if (d.exists) u = d.data(); } catch(e) {}
+  if (u.role === "superadmin") { toast("El superadmin no se puede editar"); return; }
+  const username = u.username || "";
+  const currentRole = u.role || "usuario";
+  const currentLabs = userDocLabs(u);
+  const roleOpt = (val, label) => `<option value="${val}" ${currentRole===val?"selected":""}>${label}</option>`;
   document.getElementById("modalBox").innerHTML = `
     <div class="modal-head"><h2>Editar usuario — @${esc(username)}</h2><button class="modal-x" onclick="closeModal()" aria-label="Cerrar">&times;</button></div>
     <div class="modal-body">
-      <div class="fg"><label>Correo (login)</label><input type="email" value="${esc(currentEmail)}" disabled style="opacity:.6"><small style="color:var(--text-dim)">El correo de inicio de sesión no se puede cambiar desde aquí.</small></div>
-      <div class="fg"><label for="f-editrole">Rol</label><select id="f-editrole">
-        <option value="laboratorista" ${currentRole==="laboratorista"?"selected":""}>Laboratorista</option>
-        <option value="usuario" ${currentRole==="usuario"?"selected":""}>Usuario</option>
+      <div class="fg"><label>Correo (login)</label><input type="email" value="${esc(u.email||"")}" disabled style="opacity:.6"><small style="color:var(--text-dim)">El correo de inicio de sesión no se puede cambiar desde aquí.</small></div>
+      <div class="fg"><label for="f-editrole">Rol</label><select id="f-editrole" onchange="toggleLabPicker('f-editrole','f-editlabwrap')">
+        ${roleOpt("usuario","Usuario")}${roleOpt("laboratorista","Laboratorista")}${roleOpt("admin","Administrador")}
       </select></div>
-      <div class="fg"><label for="f-editlab">Laboratorio asignado</label><select id="f-editlab">${labOptions}</select></div>
+      <div class="fg" id="f-editlabwrap" style="display:${currentRole==="laboratorista"?"block":"none"}"><label>Laboratorios asignados</label><div style="border:1px solid var(--border);border-radius:var(--radius);padding:4px 12px;max-height:180px;overflow:auto">${labCheckboxesHtml(currentLabs)}</div></div>
     </div>
     <div class="modal-foot"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-accent" onclick="doSaveUserDetails('${docId}')">Guardar</button></div>`;
   document.getElementById("modalBg").hidden = false;
@@ -482,10 +515,14 @@ function editUserDetails(docId, username, currentEmail, currentRole, currentLabI
 
 async function doSaveUserDetails(docId) {
   const role = document.getElementById("f-editrole").value;
-  const labId = document.getElementById("f-editlab").value;
-  if (!labId) { toast("Seleccione un laboratorio"); return; }
+  const labIds = [...document.querySelectorAll("#f-editlabwrap .lab-check:checked")].map(c => c.value);
+  if (role === "laboratorista" && labIds.length === 0) { toast("Seleccione al menos un laboratorio"); return; }
   try {
-    await db.collection("usuarios").doc(docId).update({ role, labId });
+    await db.collection("usuarios").doc(docId).update({
+      role,
+      labIds: labIds,
+      labId: labIds[0] || null
+    });
     logAction("editar_usuario", `${docId} → ${getRoleLabel(role)}`);
     closeModal();
     toast("Usuario actualizado");

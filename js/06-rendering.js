@@ -106,7 +106,7 @@ function renderTopbar() {
     return;
   }
   if (viewMode === "users") {
-    const backBtn = userRole === "superadmin" && !currentLabId
+    const backBtn = isAdmin() && !currentLabId
       ? `<button class="btn btn-sm" onclick="goToAdminHome()"><span class="mi" style="font-size:18px">arrow_back</span> Labs</button>`
       : `<button class="btn btn-sm" onclick="goToDashboard()"><span class="mi" style="font-size:18px">arrow_back</span> Inventario</button>`;
     tb.innerHTML = `<button class="btn-mobile-menu" onclick="toggleMobile()"><span class="mi">menu</span></button>
@@ -123,7 +123,7 @@ function renderTopbar() {
     return;
   }
   if (viewMode === "audit") {
-    const backBtnA = userRole === "superadmin"
+    const backBtnA = isAdmin()
       ? `<button class="btn btn-sm" onclick="goToAdminHome()"><span class="mi" style="font-size:18px">arrow_back</span> Labs</button>`
       : `<button class="btn btn-sm" onclick="goToDashboard()"><span class="mi" style="font-size:18px">arrow_back</span> Inventario</button>`;
     tb.innerHTML = `<button class="btn-mobile-menu" onclick="toggleMobile()"><span class="mi">menu</span></button>
@@ -133,7 +133,7 @@ function renderTopbar() {
     return;
   }
   if (viewMode === "solicitudes" || viewMode === "mis-solicitudes") {
-    const backBtn = userRole === "superadmin" && !currentLabId
+    const backBtn = isAdmin() && !currentLabId
       ? `<button class="btn btn-sm" onclick="goToAdminHome()"><span class="mi" style="font-size:18px">arrow_back</span> Labs</button>`
       : `<button class="btn btn-sm" onclick="goToDashboard()"><span class="mi" style="font-size:18px">arrow_back</span> Inventario</button>`;
     tb.innerHTML = `<button class="btn-mobile-menu" onclick="toggleMobile()"><span class="mi">menu</span></button>
@@ -186,7 +186,7 @@ function renderTopbar() {
     ${isEditor?`<button class="btn btn-accent btn-sm" onclick="openAddModal()">+ Agregar</button>`:''}
     ${isEditor&&currentLoc&&currentDrawer?`<button class="btn btn-sm" onclick="editDrawerNote('${esc(currentLoc)}','${esc(currentDrawer)}')">📝 Nota</button>`:''}
     ${viewMode!=="dashboard"?`<button class="btn btn-sm" onclick="goToDashboard()"><span class="mi" style="font-size:18px">dashboard</span> Resumen</button>`:''}
-    ${userRole==="superadmin"?`<button class="btn btn-sm" onclick="goToAdminHome()" style="border-color:var(--purple);color:var(--purple)"><span class="mi" style="font-size:18px">science</span> Labs</button>`:''}
+    ${isAdmin()?`<button class="btn btn-sm" onclick="goToAdminHome()" style="border-color:var(--purple);color:var(--purple)"><span class="mi" style="font-size:18px">science</span> Labs</button>`:''}
   `;
 }
 
@@ -522,7 +522,7 @@ function getFiltered() {
 function render() {
   const sidebar = document.getElementById("sidebar");
   const adminPanelViews = ["admin-home","users","labs","audit","solicitudes"];
-  const hideSidebar = viewMode === "admin-home" || (userRole === "superadmin" && !currentLabId && adminPanelViews.includes(viewMode));
+  const hideSidebar = viewMode === "admin-home" || (isAdmin() && !currentLabId && adminPanelViews.includes(viewMode));
   if (sidebar) sidebar.classList.toggle("sidebar-hidden", hideSidebar);
   renderSidebar(); renderTopbar(); renderContent(); updateRoleUI();
 }
@@ -560,22 +560,19 @@ function updateRoleUI() {
   // Update sidebar title based on current lab
   const titleEl = document.getElementById("sidebarTitle");
   if (titleEl) {
-    if (userRole === "superadmin") {
-      const lab = laboratorios.find(l => l.id === currentLabId);
-      titleEl.textContent = lab ? lab.name : "App Inventory";
-    } else if (userLabName) {
-      titleEl.textContent = userLabName;
-    } else {
-      titleEl.textContent = "App Inventory";
-    }
+    const lab = laboratorios.find(l => l.id === currentLabId);
+    titleEl.textContent = lab ? lab.name : "App Inventory";
   }
 
-  // Lab selector for superadmin
+  // Selector de laboratorio: los admin y usuarios cambian entre TODOS los labs;
+  // un laboratorista con varios labs asignados cambia solo entre los suyos.
   const labSel = document.getElementById("labSelector");
   if (labSel) {
-    if ((userRole === "superadmin" || userRole === "usuario") && laboratorios.length > 1) {
+    const canSeeAll = isAdmin() || userRole === "usuario";
+    const myLabs = canSeeAll ? laboratorios : laboratorios.filter(l => userLabList().includes(l.id));
+    if (myLabs.length > 1) {
       let selHtml = '<select id="labSwitcher" onchange="switchLab(this.value)" style="width:100%;margin-top:6px;padding:6px 8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface-alt);color:var(--text);font-size:13px;font-family:var(--body)">';
-      laboratorios.forEach(l => {
+      myLabs.forEach(l => {
         selHtml += `<option value="${esc(l.id)}" ${l.id===currentLabId?'selected':''}>${esc(l.name)}</option>`;
       });
       selHtml += '</select>';
@@ -585,9 +582,9 @@ function updateRoleUI() {
     }
   }
 
-  const isEditor = userRole === "superadmin" || userRole === "laboratorista";
+  const isEditor = isAdmin() || userRole === "laboratorista";
 
-  if (userRole === "superadmin") {
+  if (isAdmin()) {
     footer.innerHTML = `
       <div class="footer-drawer" id="footerDrawer">
         <div class="footer-drawer-inner">

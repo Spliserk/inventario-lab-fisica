@@ -4,7 +4,7 @@
 //  LAB MANAGEMENT (superadmin only)
 // ═══════════════════════════════════════
 function openLabManager(global) {
-  if (userRole !== "superadmin") return;
+  if (!isAdmin()) return;
   if (global) {
     if (firestoreUnsubscribe) { firestoreUnsubscribe(); firestoreUnsubscribe = null; }
     currentLabId = null;
@@ -253,10 +253,17 @@ async function deleteLabFromSystem(labId, labName) {
     try {
       // Delete lab inventory
       await db.collection("inventario").doc(labId).delete();
-      // Unassign users
-      const snap = await db.collection("usuarios").where("labId","==",labId).get();
-      for (const doc of snap.docs) {
-        await db.collection("usuarios").doc(doc.id).update({ labId: null });
+      // Desasignar el lab de todos los usuarios (soporta labIds[] y labId).
+      const toFix = new Map();
+      const byLabId = await db.collection("usuarios").where("labId","==",labId).get();
+      byLabId.forEach(d => toFix.set(d.id, d.data()));
+      try {
+        const byArray = await db.collection("usuarios").where("labIds","array-contains",labId).get();
+        byArray.forEach(d => toFix.set(d.id, d.data()));
+      } catch(e) {}
+      for (const [id, u] of toFix) {
+        const newLabIds = (Array.isArray(u.labIds) ? u.labIds : (u.labId ? [u.labId] : [])).filter(x => x !== labId);
+        await db.collection("usuarios").doc(id).update({ labIds: newLabIds, labId: newLabIds[0] || null });
       }
       // Delete lab
       await db.collection("laboratorios").doc(labId).delete();
