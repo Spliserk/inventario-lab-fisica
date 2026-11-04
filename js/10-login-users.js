@@ -402,13 +402,13 @@ function filterUsers(query) {
 // Casillas de laboratorios (selección múltiple) para asignar a un laboratorista.
 function labCheckboxesHtml(selectedIds) {
   const sel = selectedIds || [];
-  if (!laboratorios.length) return '<p style="color:var(--text-dim);font-size:13px">No hay laboratorios creados.</p>';
-  return laboratorios.map(l =>
-    `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer">
+  if (!laboratorios.length) return '<p class="lab-pick-empty">No hay laboratorios creados.</p>';
+  return '<div class="lab-pick-list">' + laboratorios.map(l =>
+    `<label class="lab-pick-item">
       <input type="checkbox" class="lab-check" value="${esc(l.id)}" ${sel.includes(l.id) ? "checked" : ""}>
-      <span>${esc(l.name)}</span>
+      <span class="lab-pick-name">${esc(l.name)}</span>
     </label>`
-  ).join('');
+  ).join('') + '</div>';
 }
 // Muestra/oculta las casillas de laboratorio según el rol elegido.
 function toggleLabPicker(roleSelectId, wrapId) {
@@ -428,7 +428,7 @@ function openAddUserModal() {
       <div class="fg"><label for="f-newuser">Nombre de usuario (login)</label><input id="f-newuser" placeholder="Ej: juanperez" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9._-]/g,'')"></div>
       <div class="fg"><label for="f-newpass">Contraseña</label><input id="f-newpass" type="password" placeholder="Mínimo 6 caracteres"></div>
       <div class="fg"><label for="f-newrole">Rol</label><select id="f-newrole" onchange="toggleLabPicker('f-newrole','f-newlabwrap')">${roleOptions}</select></div>
-      <div class="fg" id="f-newlabwrap" style="display:none"><label>Laboratorios asignados</label><div style="border:1px solid var(--border);border-radius:var(--radius);padding:4px 12px;max-height:180px;overflow:auto">${labCheckboxesHtml([])}</div></div>
+      <div class="fg" id="f-newlabwrap" style="display:none"><label>Laboratorios asignados</label><div style="max-height:240px;overflow:auto;margin-top:6px">${labCheckboxesHtml([])}</div></div>
     </div>
     <div class="modal-foot"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-accent" onclick="saveNewUser()">Crear usuario</button></div>`;
   document.getElementById("modalBg").hidden = false;
@@ -507,7 +507,7 @@ async function editUserDetails(docId) {
       <div class="fg"><label for="f-editrole">Rol</label><select id="f-editrole" onchange="toggleLabPicker('f-editrole','f-editlabwrap')">
         ${roleOpt("usuario","Usuario")}${roleOpt("laboratorista","Laboratorista")}${roleOpt("admin","Administrador")}
       </select></div>
-      <div class="fg" id="f-editlabwrap" style="display:${currentRole==="laboratorista"?"block":"none"}"><label>Laboratorios asignados</label><div style="border:1px solid var(--border);border-radius:var(--radius);padding:4px 12px;max-height:180px;overflow:auto">${labCheckboxesHtml(currentLabs)}</div></div>
+      <div class="fg" id="f-editlabwrap" style="display:${currentRole==="laboratorista"?"block":"none"}"><label>Laboratorios asignados</label><div style="max-height:240px;overflow:auto;margin-top:6px">${labCheckboxesHtml(currentLabs)}</div></div>
     </div>
     <div class="modal-foot"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-accent" onclick="doSaveUserDetails('${docId}')">Guardar</button></div>`;
   document.getElementById("modalBg").hidden = false;
